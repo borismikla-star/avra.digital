@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVRA Digital — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --accent:#2ecc9a;--accent2:#1fa876;
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#454a5a;
+  --danger:#e05555;--warn:#e0a835;
+  --r:12px;--rs:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:3px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{display:flex;align-items:center;gap:10px;padding:4px 8px 20px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:500;letter-spacing:.02em}
+.logo-sub{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);color:var(--text2);cursor:pointer;font-size:13px;transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(46,204,154,0.1);color:var(--accent)}
+.nav-icon{width:18px;text-align:center;font-size:15px;flex-shrink:0}
+.main{padding:28px 32px;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+
+/* Typography */
+.page-title{font-size:22px;font-weight:500;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.card+.card{margin-top:14px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px}
+.stat-n{font-size:30px;font-weight:300;color:var(--accent);line-height:1}
+.stat-l{font-size:11px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-danger{background:transparent;color:var(--danger);border-color:rgba(224,85,85,.25)}
+.btn-danger:hover{background:rgba(224,85,85,.08)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* Form */
+.form-group{margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+input,select,textarea{font-family:inherit;font-size:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:8px 12px;width:100%;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Upload zone */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--rs);padding:24px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(46,204,154,.04)}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-zone p{color:var(--text2);font-size:13px;margin-top:4px}
+.upload-zone strong{color:var(--text)}
+.upload-preview{margin-top:10px;font-size:12px;color:var(--accent);display:none}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--rs);padding:3px;margin-bottom:16px}
+.tab{flex:1;text-align:center;padding:7px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;user-select:none}
+.tab.active{background:var(--bg2);color:var(--text)}
+
+/* Property grid */
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.prop-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s,transform .2s}
+.prop-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.prop-thumb{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:36px;border-bottom:1px solid var(--border)}
+.prop-body{padding:14px}
+.prop-name{font-size:14px;font-weight:500;margin-bottom:3px}
+.prop-meta{font-size:12px;color:var(--text2);margin-bottom:10px}
+.prop-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);width:100%;max-width:540px;max-height:92vh;overflow-y:auto;padding:26px}
+.modal-title{font-size:18px;font-weight:500;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* QR */
+.qr-box{text-align:center;padding:10px 0}
+.qr-img{display:inline-block;background:#fff;padding:12px;border-radius:var(--r);margin:12px 0}
+.qr-img img{display:block;width:220px;height:220px}
+.qr-url{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);background:var(--bg3);padding:8px 12px;border-radius:var(--rs);word-break:break-all;margin-bottom:10px}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+
+/* Badge */
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(46,204,154,.15);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.07);color:var(--text2)}
+.badge-warn{background:rgba(224,168,53,.15);color:var(--warn)}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 18px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+
+/* Empty state */
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+.empty h3{color:var(--text);font-size:15px;margin-bottom:6px}
+
+/* Spinner */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Progress bar for upload */
+.progress{height:3px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">A</div>
+      <div><div class="logo-text">AVRA</div><div class="logo-sub">Digital</div></div>
+    </div>
+    <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-icon">▦</span> Dashboard</div>
+    <div class="nav-item" onclick="nav('properties')"><span class="nav-icon">⌂</span> Nehnuteľnosti</div>
+    <div class="nav-item" onclick="nav('qrcodes')"><span class="nav-icon">⊡</span> QR kódy</div>
+    <div class="nav-item" onclick="nav('settings')"><span class="nav-icon">⚙</span> Nastavenia</div>
+    <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);padding:0 10px 8px;text-transform:uppercase;letter-spacing:.05em">API</div>
+      <a class="nav-item" id="api-status-link" href="#" target="_blank" style="font-size:12px;color:var(--text3)">
+        <span id="api-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block"></span>
+        <span id="api-status-text">Kontrolujem...</span>
+      </a>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Prehľad AR prezentácií</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Nehnuteľností</div></div>
+        <div class="stat"><div class="stat-n" id="s-floor">—</div><div class="stat-l">Z pôdorysu</div></div>
+        <div class="stat"><div class="stat-n" id="s-model">—</div><div class="stat-l">3D model</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:15px;font-weight:500">Posledné nehnuteľnosti</div>
+          <button class="btn btn-primary btn-sm" onclick="nav('properties');openAdd()">+ Pridať</button>
+        </div>
+        <div id="dash-table"><div class="empty"><div class="empty-icon">⌂</div><p>Žiadne nehnuteľnosti</p></div></div>
+      </div>
+    </div>
+
+    <!-- Properties -->
+    <div class="page" id="page-properties">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+        <div><div class="page-title">Nehnuteľnosti</div><div class="page-sub" style="margin-bottom:0">Správa 3D modelov a pôdorysov</div></div>
+        <button class="btn btn-primary" onclick="openAdd()">+ Pridať nehnuteľnosť</button>
+      </div>
+      <div class="prop-grid" id="prop-grid"></div>
+      <div class="empty" id="prop-empty" style="display:none"><div class="empty-icon">⌂</div><h3>Žiadne nehnuteľnosti</h3><p>Kliknite na + Pridať nehnuteľnosť</p></div>
+    </div>
+
+    <!-- QR Codes -->
+    <div class="page" id="page-qrcodes">
+      <div class="page-title">QR kódy</div>
+      <div class="page-sub">Generujte a stiahnite QR kódy pre AR prehliadky</div>
+      <div class="card">
+        <table><thead><tr><th>Nehnuteľnosť</th><th>Typ</th><th>URL</th><th></th></tr></thead>
+        <tbody id="qr-tbody"></tbody></table>
+        <div class="empty" id="qr-empty" style="display:none"><div class="empty-icon">⊡</div><h3>Žiadne QR kódy</h3></div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="page" id="page-settings">
+      <div class="page-title">Nastavenia</div>
+      <div class="page-sub">Konfigurácia AVRA Digital</div>
+      <div class="card" style="max-width:460px">
+        <div class="form-group">
+          <label>URL backendu (Railway)</label>
+          <input type="text" id="cfg-api" placeholder="https://avra-digital.up.railway.app">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Nájdete v Railway dashboarde → Settings → Domains</div>
+        </div>
+        <div class="form-group">
+          <label>Názov agentúry</label>
+          <input type="text" id="cfg-agency" placeholder="Reality SK s.r.o.">
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">Uložiť</button>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Stav backendu</div>
+          <button class="btn btn-ghost btn-sm" onclick="checkApi()">Otestovať spojenie</button>
+          <span id="api-test-result" style="font-size:12px;margin-left:10px;color:var(--text2)"></span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="prop-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-h">Pridať nehnuteľnosť</div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group"><label>Názov *</label><input type="text" id="f-name" placeholder="Byt 3+1, Karlova Ves"></div>
+    <div class="grid2">
+      <div class="form-group"><label>Rozloha (m²)</label><input type="number" id="f-area" placeholder="78"></div>
+      <div class="form-group"><label>Cena (€)</label><input type="text" id="f-price" placeholder="189 000"></div>
+    </div>
+    <div class="form-group"><label>Popis</label><textarea id="f-desc" rows="2" placeholder="Krátky popis..."></textarea></div>
+    <div class="tabs">
+      <div class="tab active" id="t-floor" onclick="switchTab('floor')">📐 Pôdorys (PDF/PNG)</div>
+      <div class="tab" id="t-model" onclick="switchTab('model')">📦 3D Model (glTF)</div>
+    </div>
+    <div id="c-floor">
+      <div class="upload-zone" onclick="document.getElementById('i-floor').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="onDrop(event,'floor')">
+        <div class="upload-icon">📐</div>
+        <p><strong>Kliknite</strong> alebo presuňte pôdorys</p>
+        <p style="font-size:11px;margin-top:3px">PDF, PNG, JPG — automaticky sa vygeneruje 3D model</p>
+      </div>
+      <input type="file" id="i-floor" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="onFile(this,'floor')">
+      <div class="upload-preview" id="p-floor"></div>
+      <div class="progress" id="prog-floor"><div class="progress-fill" id="prog-floor-fill" style="width:0%"></div></div>
+    </div>
+    <div id="c-model" style="display:none">
+      <div class="upload-zone" onclick="document.getElementById('i-model').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="onDrop(event,'model')">
+        <div class="upload-icon">📦</div>
+        <p><strong>Kliknite</strong> alebo presuňte 3D model</p>
+        <p style="font-size:11px;margin-top:3px">glTF, GLB formáty</p>
+      </div>
+      <input type="file" id="i-model" accept=".gltf,.glb,.obj" style="display:none" onchange="onFile(this,'model')">
+      <div class="upload-preview" id="p-model"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Zrušiť</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveProperty()">
+        <span id="save-label">Uložiť</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="overlay" id="qr-modal">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div class="modal-title" id="qr-title">QR kód</div>
+    <div class="qr-url" id="qr-url-text"></div>
+    <div class="qr-img"><img id="qr-img-el" src="" alt="QR kód"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">
+      <button class="btn btn-primary" onclick="dlQR()">⬇ Stiahnuť PNG</button>
+      <button class="btn btn-ghost" onclick="copyQrUrl()">⊙ Kopírovať URL</button>
+    </div>
+    <a id="qr-open-link" href="#" target="_blank" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px">↗ Otvoriť AR viewer</a>
+    <div class="modal-footer" style="justify-content:center"><button class="btn btn-ghost" onclick="closeQr()">Zavrieť</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = () => localStorage.getItem('avra_api') || (location.origin === 'null' ? 'http://localhost:3000' : location.origin);
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const idx = ['dashboard','properties','qrcodes','settings'].indexOf(page);
+  document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
+  if (page === 'dashboard')   loadDashboard();
+  if (page === 'properties')  loadProperties();
+  if (page === 'qrcodes')     loadQrCodes();
+}
+
+// ── API helper ────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API() + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
+  }
+  return res.json();
+}
+
+async function checkApi() {
+  try {
+    const data = await apiFetch('/health');
+    document.getElementById('api-dot').style.background = 'var(--accent)';
+    document.getElementById('api-status-text').textContent = 'Online';
+    document.getElementById('api-test-result').textContent = '✓ Spojenie OK';
+    document.getElementById('api-test-result').style.color = 'var(--accent)';
+  } catch {
+    document.getElementById('api-dot').style.background = 'var(--danger)';
+    document.getElementById('api-status-text').textContent = 'Offline';
+    document.getElementById('api-test-result').textContent = '✗ Nedostupné';
+    document.getElementById('api-test-result').style.color = 'var(--danger)';
+  }
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('cfg-api').value    = localStorage.getItem('avra_api') || '';
+  document.getElementById('cfg-agency').value = localStorage.getItem('avra_agency') || '';
+}
+function saveSettings() {
+  localStorage.setItem('avra_api',    document.getElementById('cfg-api').value.replace(/\/$/, ''));
+  localStorage.setItem('avra_agency', document.getElementById('cfg-agency').value);
+  toast('Nastavenia uložené'); checkApi();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const props = await apiFetch('/api/properties');
+    document.getElementById('s-total').textContent = props.length;
+    document.getElementById('s-floor').textContent = props.filter(p => p.model_type === 'floor').length;
+    document.getElementById('s-model').textContent = props.filter(p => p.model_type === 'gltf').length;
+    const el = document.getElementById('dash-table');
+    if (!props.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">⌂</div><p>Žiadne nehnuteľnosti</p></div>'; return; }
+    el.innerHTML = `<table><thead><tr><th>Názov</th><th>Rozloha</th><th>Cena</th><th>Typ</th></tr></thead><tbody>
+      ${props.slice(0,8).map(p=>`<tr>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.area?p.area+' m²':'—'}</td>
+        <td>${p.price||'—'}</td>
+        <td><span class="badge ${p.model_type==='gltf'?'badge-green':'badge-warn'}">${p.model_type==='gltf'?'glTF':'Pôdorys'}</span></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  } catch(e) {
+    document.getElementById('dash-table').innerHTML = `<div class="empty"><p style="color:var(--danger)">Chyba: ${e.message}</p><p style="margin-top:8px">Skontrolujte URL backendu v Nastaveniach</p></div>`;
+  }
+}
+
+// ── Properties ────────────────────────────────────────────────────────────────
+async function loadProperties() {
+  const grid = document.getElementById('prop-grid');
+  const empty = document.getElementById('prop-empty');
+  grid.innerHTML = '<div style="color:var(--text2);padding:20px">Načítavam...</div>';
+  try {
+    const props = await apiFetch('/api/properties');
+    if (!props.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    grid.innerHTML = props.map(p => `
+      <div class="prop-card">
+        <div class="prop-thumb">${p.model_type==='gltf'?'📦':'📐'}</div>
+        <div class="prop-body">
+          <div class="prop-name">${p.name}</div>
+          <div class="prop-meta">${p.area?p.area+' m² · ':''}${p.price||'Cena neuvedená'}</div>
+          <div class="prop-actions">
+            <button class="btn btn-ghost btn-sm" onclick="showQr('${p.id}','${escHtml(p.name)}')">⊡ QR</button>
+            <a href="${API()}/view/${p.id}" target="_blank" class="btn btn-ghost btn-sm">↗ AR</a>
+            <button class="btn btn-danger btn-sm" onclick="deleteProp('${p.id}','${escHtml(p.name)}')">✕</button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="color:var(--danger);padding:16px">${e.message}</div>`;
+  }
+}
+
+function escHtml(s) { return s.replace(/'/g, "\\'"); }
+
+async function deleteProp(id, name) {
+  if (!confirm(`Zmazať "${name}"?`)) return;
+  try { await apiFetch(`/api/properties/${id}`, { method: 'DELETE' }); toast('Zmazané'); loadProperties(); }
+  catch(e) { toast('Chyba: '+e.message, true); }
+}
+
+// ── Add/Edit Modal ────────────────────────────────────────────────────────────
+let currentTab = 'floor';
+let floorFile = null, modelFile = null;
+
+function openAdd() {
+  document.getElementById('modal-h').textContent = 'Pridať nehnuteľnosť';
+  document.getElementById('edit-id').value = '';
+  ['f-name','f-area','f-price','f-desc'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('p-floor').style.display = 'none';
+  document.getElementById('p-model').style.display = 'none';
+  document.getElementById('prog-floor').style.display = 'none';
+  floorFile = modelFile = null;
+  switchTab('floor');
+  document.getElementById('prop-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('prop-modal').classList.remove('open'); }
+function switchTab(t) {
+  currentTab = t;
+  document.getElementById('t-floor').classList.toggle('active', t==='floor');
+  document.getElementById('t-model').classList.toggle('active', t==='model');
+  document.getElementById('c-floor').style.display = t==='floor'?'block':'none';
+  document.getElementById('c-model').style.display = t==='model'?'block':'none';
+}
+function onFile(input, type) {
+  const f = input.files[0]; if (!f) return;
+  if (type==='floor') { floorFile = f; showPreview('p-floor', `📐 ${f.name} (${(f.size/1024).toFixed(0)} kB)`); }
+  else { modelFile = f; showPreview('p-model', `📦 ${f.name} (${(f.size/1024).toFixed(0)} kB)`); }
+}
+function onDrop(e, type) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag');
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  if (type==='floor') { floorFile=f; showPreview('p-floor', `📐 ${f.name}`); }
+  else { modelFile=f; showPreview('p-model', `📦 ${f.name}`); }
+}
+function showPreview(id, text) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.style.display = 'block';
+}
+
+async function saveProperty() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Zadajte názov', true); return; }
+
+  const btn = document.getElementById('save-btn');
+  const lbl = document.getElementById('save-label');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spin"></span> Spracúvam...';
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('area',        document.getElementById('f-area').value);
+  fd.append('price',       document.getElementById('f-price').value);
+  fd.append('description', document.getElementById('f-desc').value);
+
+  if (currentTab === 'floor' && floorFile) {
+    fd.append('floor_plan', floorFile);
+    document.getElementById('prog-floor').style.display = 'block';
+  }
+  if (currentTab === 'model' && modelFile) fd.append('model_3d', modelFile);
+
+  try {
+    const data = await apiFetch('/api/properties', { method: 'POST', body: fd });
+    closeModal();
+    toast(`✓ ${data.name} — ${data.rooms} miestností`);
+    loadProperties();
+    // Auto-show QR
+    setTimeout(() => showQrFromData(data), 500);
+  } catch(e) {
+    toast('Chyba: '+e.message, true);
+  } finally {
+    btn.disabled = false; lbl.textContent = 'Uložiť';
+    document.getElementById('prog-floor').style.display = 'none';
+  }
+}
+
+// ── QR Codes ──────────────────────────────────────────────────────────────────
+async function loadQrCodes() {
+  const tbody = document.getElementById('qr-tbody');
+  const empty = document.getElementById('qr-empty');
+  try {
+    const props = await apiFetch('/api/properties');
+    if (!props.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = props.map(p => `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="badge ${p.model_type==='gltf'?'badge-green':'badge-warn'}">${p.model_type==='gltf'?'glTF':'Pôdorys'}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${(API()+'/view/'+p.id).slice(0,42)}…</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="showQr('${p.id}','${escHtml(p.name)}')">⊡ Zobraziť</button></td>
+    </tr>`).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="color:var(--danger)">${e.message}</td></tr>`; }
+}
+
+async function showQr(id, name) {
+  try {
+    const data = await apiFetch(`/api/properties/${id}/qr`);
+    showQrFromData({ id, name, qrCode: data.qrCode, viewerUrl: data.url });
+  } catch(e) { toast('Chyba: '+e.message, true); }
+}
+
+function showQrFromData(data) {
+  document.getElementById('qr-title').textContent = data.name || 'QR kód';
+  document.getElementById('qr-url-text').textContent = data.viewerUrl || (API()+'/view/'+data.id);
+  document.getElementById('qr-img-el').src = data.qrCode || '';
+  document.getElementById('qr-open-link').href = data.viewerUrl || (API()+'/view/'+data.id);
+  window._currentQR = data;
+  document.getElementById('qr-modal').classList.add('open');
+}
+function closeQr() { document.getElementById('qr-modal').classList.remove('open'); }
+
+function dlQR() {
+  const img = document.getElementById('qr-img-el').src;
+  const a = document.createElement('a');
+  a.href = img; a.download = `qr-${window._currentQR?.id||'avra'}.png`;
+  a.click();
+}
+function copyQrUrl() {
+  const url = document.getElementById('qr-url-text').textContent;
+  navigator.clipboard.writeText(url).then(() => toast('URL skopírovaná'));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.color = err ? 'var(--danger)' : 'var(--accent)';
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.opacity='0', 3000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSettings();
+loadDashboard();
+checkApi();
+</script>
+</body>
+</html>
