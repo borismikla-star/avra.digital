@@ -1,84 +1,53 @@
-const express = require('express');
-const multer  = require('multer');
-const path    = require('path');
-const fs      = require('fs');
+const express  = require('express');
+const multer   = require('multer');
+const path     = require('path');
+const fs       = require('fs');
 const { execFile } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
-const QRCode  = require('qrcode');
-const cors    = require('cors');
-const Database = require('better-sqlite3');
+const QRCode   = require('qrcode');
+const cors     = require('cors');
+const low      = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const app      = express();
+const PORT     = process.env.PORT || 3000;
+const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 
-// ── Dirs ──────────────────────────────────────────────────────────────────────
 const UPLOADS_DIR = path.join(__dirname, '../uploads');
-const DB_PATH     = path.join(__dirname, '../data/avra.db');
+const DATA_DIR    = path.join(__dirname, '../data');
 const PUBLIC_DIR  = path.join(__dirname, '../public');
-[UPLOADS_DIR, path.dirname(DB_PATH)].forEach(d => fs.mkdirSync(d, { recursive: true }));
+[UPLOADS_DIR, DATA_DIR].forEach(d => fs.mkdirSync(d, { recursive: true }));
 
-// ── Database ──────────────────────────────────────────────────────────────────
-const db = new Database(DB_PATH);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS properties (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    area        TEXT,
-    price       TEXT,
-    description TEXT,
-    rooms_json  TEXT,
-    model_type  TEXT DEFAULT 'floor',
-    pdf_path    TEXT,
-    model_path  TEXT,
-    qr_url      TEXT,
-    created_at  INTEGER DEFAULT (unixepoch())
-  );
-`);
+const adapter = new FileSync(path.join(DATA_DIR, 'db.json'));
+const db = low(adapter);
+db.defaults({ properties: [] }).write();
 
-// ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 
-// File upload config
 const storage = multer.diskStorage({
   destination: UPLOADS_DIR,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  }
+  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.png', '.jpg', '.jpeg', '.gltf', '.glb', '.obj'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, allowed.includes(ext));
+    const ok = ['.pdf','.png','.jpg','.jpeg','.gltf','.glb','.obj'];
+    cb(null, ok.includes(path.extname(file.originalname).toLowerCase()));
   }
 });
 
-// ── Python parser helper ──────────────────────────────────────────────────────
 function parsePDF(filePath) {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, '../scripts/parse_floorplan.py');
-    const python = process.platform === 'win32' ? 'python' : 'python3';
-    execFile(python, [scriptPath, filePath], { timeout: 30000 }, (err, stdout, stderr) => {
-      if (err) {
-        resolve({ error: err.message, rooms: defaultRooms() });
-        return;
-      }
+  return new Promise(resolve => {
+    const script = path.join(__dirname, '../scripts/parse_floorplan.py');
+    const py = process.platform === 'win32' ? 'python' : 'python3';
+    execFile(py, [script, filePath], { timeout: 30000 }, (err, stdout) => {
       try {
-        const result = JSON.parse(stdout.trim());
-        if (result.error || !result.rooms?.length) {
-          resolve({ rooms: defaultRooms(), source: 'demo' });
-        } else {
-          resolve(result);
-        }
-      } catch {
-        resolve({ rooms: defaultRooms(), source: 'demo' });
-      }
+        const r = JSON.parse(stdout.trim());
+        resolve(r.rooms?.length ? r : { rooms: defaultRooms(), source: 'demo' });
+      } catch { resolve({ rooms: defaultRooms(), source: 'demo' }); }
     });
   });
 }
@@ -93,7 +62,6 @@ function defaultRooms() {
   ];
 }
 
-// ── API: Upload + create property ─────────────────────────────────────────────
 app.post('/api/properties', upload.fields([
   { name: 'floor_plan', maxCount: 1 },
   { name: 'model_3d',   maxCount: 1 }
@@ -101,121 +69,56 @@ app.post('/api/properties', upload.fields([
   try {
     const { name, area, price, description } = req.body;
     if (!name) return res.status(400).json({ error: 'Názov je povinný' });
-
     const id = uuidv4();
     const viewerUrl = `${BASE_URL}/view/${id}`;
-
-    let rooms = defaultRooms();
-    let modelType = 'demo';
-    let pdfPath = null;
-    let modelPath = null;
-
-    // Parse floor plan
+    let rooms = defaultRooms(), modelType = 'demo', pdfPath = null, modelPath = null;
     if (req.files?.floor_plan?.[0]) {
       pdfPath = req.files.floor_plan[0].path;
-      const ext = path.extname(pdfPath).toLowerCase();
-      if (ext === '.pdf' || ext === '.png' || ext === '.jpg' || ext === '.jpeg') {
-        const parsed = await parsePDF(pdfPath);
-        rooms = parsed.rooms;
-        modelType = 'floor';
-      }
+      const parsed = await parsePDF(pdfPath);
+      rooms = parsed.rooms; modelType = 'floor';
     }
-
-    // 3D model uploaded
-    if (req.files?.model_3d?.[0]) {
-      modelPath = req.files.model_3d[0].path;
-      modelType = 'gltf';
-    }
-
-    // Generate QR code as base64
-    const qrDataUrl = await QRCode.toDataURL(viewerUrl, {
-      width: 300,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' }
-    });
-
-    // Save to DB
-    db.prepare(`
-      INSERT INTO properties (id, name, area, price, description, rooms_json, model_type, pdf_path, model_path, qr_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, area || null, price || null, description || null,
-           JSON.stringify(rooms), modelType, pdfPath, modelPath, viewerUrl);
-
-    res.json({
-      id,
-      name,
-      viewerUrl,
-      qrCode: qrDataUrl,
-      rooms: rooms.length,
-      modelType,
-      message: 'Nehnuteľnosť úspešne vytvorená'
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+    if (req.files?.model_3d?.[0]) { modelPath = req.files.model_3d[0].path; modelType = 'gltf'; }
+    const qrCode = await QRCode.toDataURL(viewerUrl, { width: 300, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+    const property = { id, name, area: area||null, price: price||null, description: description||null, rooms, modelType, pdfPath, modelPath, viewerUrl, createdAt: Date.now() };
+    db.get('properties').push(property).write();
+    res.json({ id, name, viewerUrl, qrCode, rooms: rooms.length, modelType, message: 'Nehnuteľnosť vytvorená' });
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-// ── API: List all properties ──────────────────────────────────────────────────
 app.get('/api/properties', (req, res) => {
-  const rows = db.prepare(
-    'SELECT id, name, area, price, description, model_type, qr_url, created_at FROM properties ORDER BY created_at DESC'
-  ).all();
-  res.json(rows);
+  const list = db.get('properties').map(p => ({ id:p.id, name:p.name, area:p.area, price:p.price, model_type:p.modelType, qr_url:p.viewerUrl, created_at:p.createdAt })).orderBy(['createdAt'],['desc']).value();
+  res.json(list);
 });
 
-// ── API: Get single property ──────────────────────────────────────────────────
 app.get('/api/properties/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Nehnuteľnosť nenájdená' });
-  row.rooms = JSON.parse(row.rooms_json || '[]');
-  delete row.rooms_json;
-  res.json(row);
+  const p = db.get('properties').find({ id: req.params.id }).value();
+  if (!p) return res.status(404).json({ error: 'Nenájdené' });
+  res.json({ ...p, model_type: p.modelType });
 });
 
-// ── API: Update property ──────────────────────────────────────────────────────
-app.put('/api/properties/:id', express.json(), (req, res) => {
+app.put('/api/properties/:id', (req, res) => {
   const { name, area, price, description } = req.body;
-  db.prepare('UPDATE properties SET name=?, area=?, price=?, description=? WHERE id=?')
-    .run(name, area, price, description, req.params.id);
+  db.get('properties').find({ id: req.params.id }).assign({ name, area, price, description }).write();
   res.json({ message: 'Aktualizované' });
 });
 
-// ── API: Delete property ──────────────────────────────────────────────────────
 app.delete('/api/properties/:id', (req, res) => {
-  const row = db.prepare('SELECT pdf_path, model_path FROM properties WHERE id = ?').get(req.params.id);
-  if (row) {
-    if (row.pdf_path   && fs.existsSync(row.pdf_path))   fs.unlinkSync(row.pdf_path);
-    if (row.model_path && fs.existsSync(row.model_path)) fs.unlinkSync(row.model_path);
-  }
-  db.prepare('DELETE FROM properties WHERE id = ?').run(req.params.id);
+  const p = db.get('properties').find({ id: req.params.id }).value();
+  if (p) { if (p.pdfPath && fs.existsSync(p.pdfPath)) fs.unlinkSync(p.pdfPath); if (p.modelPath && fs.existsSync(p.modelPath)) fs.unlinkSync(p.modelPath); }
+  db.get('properties').remove({ id: req.params.id }).write();
   res.json({ message: 'Zmazané' });
 });
 
-// ── API: Regenerate QR ────────────────────────────────────────────────────────
 app.get('/api/properties/:id/qr', async (req, res) => {
-  const row = db.prepare('SELECT id, name FROM properties WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Nenájdené' });
-  const url = `${BASE_URL}/view/${row.id}`;
-  const qrDataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2 });
-  res.json({ qrCode: qrDataUrl, url });
+  const p = db.get('properties').find({ id: req.params.id }).value();
+  if (!p) return res.status(404).json({ error: 'Nenájdené' });
+  const url = `${BASE_URL}/view/${p.id}`;
+  const qrCode = await QRCode.toDataURL(url, { width: 400, margin: 2 });
+  res.json({ qrCode, url });
 });
 
-// ── AR Viewer route ───────────────────────────────────────────────────────────
-app.get('/view/:id', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viewer/index.html'));
-});
+app.get('/view/:id', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'viewer/index.html')));
 
-// ── Health check ──────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', product: 'AVRA Digital' });
-});
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.0.0', product: 'AVRA Digital', properties: db.get('properties').size().value() }));
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🏠 AVRA Digital backend running`);
-  console.log(`   Local:  http://localhost:${PORT}`);
-  console.log(`   Admin:  http://localhost:${PORT}/admin`);
-  console.log(`   API:    http://localhost:${PORT}/api/properties\n`);
-});
+app.listen(PORT, () => { console.log(`AVRA Digital running on port ${PORT}\nAdmin: ${BASE_URL}/admin`); });
