@@ -284,6 +284,49 @@ async function startAR() {
   renderer.setAnimationLoop(xrFrame);
 }
 
+function showIOSPrompt() {
+  // Skryj loading, ukáž špeciálnu iOS uvítaciu obrazovku s tlačidlom
+  document.getElementById('loading').style.display='none';
+  const div = document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:#080a10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center;';
+  div.innerHTML=`
+    <div style="width:64px;height:64px;background:#2ecc9a;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000">A</div>
+    <div style="font-size:20px;font-weight:500;color:#fff" id="ios-prop-name">${document.getElementById('pt').textContent || 'AR Prehliadka'}</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.45);max-width:280px;line-height:1.7">Klepnite pre spustenie AR prehliadky. Safari požiada o prístup ku kamere.</div>
+    <button onclick="startIOSCamera(this.parentElement)" style="background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:16px 40px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px">
+      Spustiť AR prehliadku
+    </button>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:4px">Vyžaduje prístup ku kamere</div>
+  `;
+  document.body.appendChild(div);
+}
+
+async function startIOSCamera(promptEl) {
+  promptEl.remove();
+  document.getElementById('loading').style.display='flex';
+  setStep('Spúšťam kameru…');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{exact:'environment'}, width:{ideal:1920}, height:{ideal:1080} }
+    });
+    const vid = document.getElementById('vid');
+    vid.srcObject = stream;
+    vid.setAttribute('playsinline','');
+    vid.setAttribute('webkit-playsinline','');
+    await vid.play();
+    show();
+    camera.position.set(0,0.5,1.2); camera.lookAt(0,0,0);
+    hitMat = new THREE.Matrix4().makeTranslation(0,-0.2,-0.5).toArray();
+    document.getElementById('hint').textContent='📱 Klepnite pre umiestnenie modelu';
+    document.getElementById('place-btn').style.display='block';
+    renderer.setAnimationLoop(()=>renderer.render(scene,camera));
+  } catch(e) {
+    // Kamera zamietnutá — 3D bez kamery
+    document.getElementById('loading').style.display='none';
+    launch3D();
+  }
+}
+
 function xrFrame(ts, frame) {
   if(!frame) return;
   const sess = renderer.xr.getSession();
@@ -311,6 +354,8 @@ function xrFrame(ts, frame) {
 }
 
 async function tryCamera() {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) { launch3D(); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
@@ -324,8 +369,7 @@ async function tryCamera() {
     document.getElementById('place-btn').style.display='block';
     renderer.setAnimationLoop(()=>renderer.render(scene,camera));
   } catch {
-    document.getElementById('fallback').style.display='flex';
-    document.getElementById('loading').style.display='none';
+    launch3D();
   }
 }
 
@@ -399,8 +443,23 @@ window.closeTip=closeTip;
 (async () => {
   await loadProperty();
   buildModel();
-  setStep('Spúšťam AR kameru…');
-  await new Promise(r=>setTimeout(r,800));
+  setStep('Spúšťam prehliadku…');
+  await new Promise(r=>setTimeout(r,600));
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isIOS    = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (!isMobile) {
+    // Desktop — priamo 3D
+    launch3D(); return;
+  }
+
+  if (isIOS) {
+    // iOS — ukáž tlačidlo pre spustenie kamery (Safari vyžaduje user gesture)
+    showIOSPrompt(); return;
+  }
+
+  // Android — skús WebXR, fallback na kameru
   await startAR();
 })();
 </script>
