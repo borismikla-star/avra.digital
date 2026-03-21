@@ -4,464 +4,299 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AVRA — AR Prehliadka</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#080a10;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;height:100vh;color:#fff;touch-action:none}
-#loading{position:fixed;inset:0;background:#080a10;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
-.ld-mark{width:52px;height:52px;background:#2ecc9a;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#000;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-.ld-title{font-size:18px;font-weight:500}
-.ld-sub{font-size:12px;color:rgba(255,255,255,.4);max-width:260px;line-height:1.7}
-.ld-bar{width:180px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
-.ld-fill{height:100%;background:#2ecc9a;border-radius:2px;animation:ldbar 2.5s ease forwards}
-@keyframes ldbar{from{width:0}to{width:100%}}
-.ld-step{font-size:11px;color:rgba(255,255,255,.3);min-height:16px}
+body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;overflow:hidden;height:100vh;color:#fff;touch-action:none}
 
-#app{width:100%;height:100%;position:relative;display:none}
-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
-canvas#c{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+#splash{position:fixed;inset:0;background:#080a10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
+.sp-mark{width:60px;height:60px;background:#2ecc9a;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#000;margin-bottom:4px}
+.sp-title{font-size:20px;font-weight:500}
+.sp-sub{font-size:13px;color:rgba(255,255,255,.4);max-width:260px;line-height:1.7}
+.sp-btn{background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:15px 42px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px;width:100%;max-width:280px}
+.sp-skip{font-size:12px;color:rgba(255,255,255,.3);cursor:pointer;margin-top:4px;text-decoration:underline}
 
-#topbar{position:fixed;top:0;left:0;right:0;z-index:20;background:linear-gradient(to bottom,rgba(0,0,0,.75),transparent);padding:14px 16px 44px;pointer-events:none}
-.avra-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,154,.15);border:1px solid rgba(46,204,154,.25);color:#2ecc9a;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:7px}
-.avra-badge-dot{width:5px;height:5px;border-radius:50%;background:#2ecc9a}
-.prop-title{font-size:20px;font-weight:500;line-height:1.2}
-.prop-meta{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
+#app{position:fixed;inset:0;display:none}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 
-#hint{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;transition:opacity .4s;text-align:center}
+#hud-top{position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);padding:14px 16px 40px;pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,154,.15);border:1px solid rgba(46,204,154,.3);color:#2ecc9a;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:6px}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:#2ecc9a}
+#prop-name{font-size:19px;font-weight:500}
+#prop-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
 
-#place-btn{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:20;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 38px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;box-shadow:0 0 0 0 rgba(46,204,154,.5);animation:glow 2s ease-out infinite}
-@keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 20px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
+#hint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none}
 
-#ctrl{position:fixed;bottom:32px;right:14px;z-index:20;display:none;flex-direction:column;gap:9px}
-.cbtn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;transition:background .15s}
-.cbtn:active{background:rgba(255,255,255,.15)}
+#place-btn{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 36px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;animation:glow 2s ease-out infinite}
+@keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 18px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
 
-#tooltip{position:fixed;left:14px;right:70px;bottom:32px;z-index:30;display:none;background:rgba(8,10,16,.92);backdrop-filter:blur(12px);border:1px solid rgba(46,204,154,.3);border-radius:14px;padding:16px}
-.tt-apt{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:3px}
-.tt-name{font-size:18px;font-weight:500;color:#2ecc9a;margin-bottom:2px}
-.tt-row{display:flex;gap:20px;margin:8px 0}
-.tt-stat strong{display:block;font-size:20px;font-weight:500;color:#fff}
-.tt-stat span{font-size:11px;color:rgba(255,255,255,.4)}
-.tt-close{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:8px;border-top:1px solid rgba(255,255,255,.07)}
+#ctrl{position:absolute;bottom:32px;right:14px;z-index:10;display:none;flex-direction:column;gap:8px}
+.cb{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 
-#fallback{display:none;position:fixed;inset:0;background:#080a10;z-index:400;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
-#fallback h2{font-size:20px;font-weight:500}
-#fallback p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.7;max-width:300px}
-.fb-btn{background:#2ecc9a;color:#000;border:none;border-radius:10px;padding:13px 28px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px}
+#tip{position:absolute;left:14px;right:62px;bottom:32px;z-index:20;display:none;background:rgba(8,10,16,.92);backdrop-filter:blur(12px);border:1px solid rgba(46,204,154,.3);border-radius:14px;padding:16px}
+.tip-name{font-size:17px;font-weight:500;color:#2ecc9a;margin-bottom:4px}
+.tip-area{font-size:13px;color:rgba(255,255,255,.5)}
+.tip-close{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);margin-top:8px}
 
-#minimap{position:fixed;top:80px;right:14px;z-index:20;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;display:none;width:110px}
-#minimap canvas{width:100%;display:block}
-#minimap-label{font-size:9px;color:rgba(255,255,255,.35);text-align:center;padding:4px 0}
-
-#error-screen{display:none;position:fixed;inset:0;background:#080a10;z-index:500;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center}
-#error-screen h2{font-size:18px;font-weight:500;color:#e05555}
-#error-screen p{font-size:13px;color:rgba(255,255,255,.45);max-width:280px;line-height:1.7}
+#mm{position:absolute;top:80px;right:12px;z-index:10;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;display:none}
+#mm canvas{width:100px;display:block}
+#mm-lbl{font-size:9px;color:rgba(255,255,255,.35);text-align:center;padding:3px 0}
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="ld-mark">A</div>
-  <div class="ld-title">AVRA Digital</div>
-  <div class="ld-bar"><div class="ld-fill"></div></div>
-  <div class="ld-step" id="ld-step">Načítavam nehnuteľnosť…</div>
-  <div class="ld-sub">Pripravte sa na AR prehliadku</div>
-</div>
-
-<div id="error-screen">
-  <div style="font-size:40px">⚠</div>
-  <h2>Nepodarilo sa načítať</h2>
-  <p id="error-msg">Nehnuteľnosť nebola nájdená alebo server je nedostupný.</p>
-</div>
-
-<div id="fallback">
-  <div style="font-size:44px">📱</div>
-  <h2>AR nie je dostupné</h2>
-  <p>Váš prehliadač nepodporuje WebXR. Zobrazíme 3D model s otáčaním.</p>
-  <button class="fb-btn" onclick="launch3D()">Zobraziť 3D model</button>
+<!-- Splash — vždy ako prvé, vyžaduje klepnutie -->
+<div id="splash">
+  <div class="sp-mark">A</div>
+  <div class="sp-title" id="sp-name">AVRA Digital</div>
+  <div class="sp-sub" id="sp-sub">Načítavam nehnuteľnosť…</div>
+  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">
+    Spustiť AR prehliadku
+  </button>
+  <div class="sp-skip" id="sp-skip" onclick="launch3D()" style="display:none">Zobraziť len 3D model</div>
 </div>
 
 <div id="app">
-  <video id="vid" autoplay playsinline muted></video>
+  <video id="vid" autoplay playsinline muted webkit-playsinline></video>
   <canvas id="c"></canvas>
-
-  <div id="topbar">
-    <div class="avra-badge"><div class="avra-badge-dot"></div>AVRA AR</div>
-    <div class="prop-title" id="pt"></div>
-    <div class="prop-meta" id="pm"></div>
+  <div id="hud-top">
+    <div class="badge"><div class="badge-dot"></div>AVRA AR</div>
+    <div id="prop-name"></div>
+    <div id="prop-meta"></div>
   </div>
-
-  <div id="hint">📱 Namierte kameru na rovný povrch</div>
+  <div id="hint">📱 Namierte kameru na rovný povrch a klepnite</div>
   <button id="place-btn" onclick="place()">Umiestniť model</button>
-
   <div id="ctrl">
-    <div class="cbtn" onclick="scUp()">+</div>
-    <div class="cbtn" onclick="scDn()">−</div>
-    <div class="cbtn" onclick="rotL()">↺</div>
-    <div class="cbtn" onclick="rotR()">↻</div>
-    <div class="cbtn" onclick="reset()" style="font-size:13px">⟳</div>
+    <div class="cb" onclick="scUp()">+</div>
+    <div class="cb" onclick="scDn()">−</div>
+    <div class="cb" onclick="rotL()">↺</div>
+    <div class="cb" onclick="rotR()">↻</div>
+    <div class="cb" onclick="resetView()" style="font-size:13px">⟳</div>
   </div>
-
-  <div id="tooltip">
-    <div class="tt-apt" id="tt-label"></div>
-    <div class="tt-name" id="tt-name"></div>
-    <div class="tt-row">
-      <div class="tt-stat"><strong id="tt-area">—</strong><span>m² plocha</span></div>
-    </div>
-    <div class="tt-close" onclick="closeTip()">✕ zavrieť</div>
+  <div id="tip">
+    <div class="tip-name" id="tip-name"></div>
+    <div class="tip-area" id="tip-area"></div>
+    <div class="tip-close" onclick="document.getElementById('tip').style.display='none'">✕ zavrieť</div>
   </div>
-
-  <div id="minimap"><canvas id="mm-canvas"></canvas><div id="minimap-label"></div></div>
+  <div id="mm"><canvas id="mmc"></canvas><div id="mm-lbl"></div></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const propId = new URLSearchParams(location.search).get('id');
-let property = null;
-let rooms = [];
+let property = null, rooms = [], modelSc = 1, placed = false, hitMat = null;
 
-// ── Load property from API ────────────────────────────────────────────────────
-async function loadProperty() {
-  setStep('Načítavam dáta…');
-  try {
-    if (!propId) throw new Error('Chýba ID nehnuteľnosti v URL');
-    const res = await fetch(`/api/properties/${propId}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    property = await res.json();
-    rooms = property.rooms || defaultRooms();
-    document.getElementById('pt').textContent = property.name;
-    document.getElementById('pm').textContent = [
-      property.area ? property.area + ' m²' : '',
-      property.price || ''
-    ].filter(Boolean).join(' · ') || 'AR prehliadka';
-    setStep('Budujem 3D model…');
-    return true;
-  } catch(e) {
-    // Fallback: try to get from URL params or use demo
-    const name = new URLSearchParams(location.search).get('name') || 'Demo byt';
-    property = { name, rooms: defaultRooms() };
-    rooms = defaultRooms();
-    document.getElementById('pt').textContent = name;
-    document.getElementById('pm').textContent = 'AR prehliadka';
-    return false;
-  }
-}
-
+// ── Default rooms ─────────────────────────────────────────────────────────────
 function defaultRooms() {
   return [
     {name:'Obývacia izba',label:'R1',x:-0.105,z:-0.07, w:0.245,d:0.21, area:28},
-    {name:'Kuchyňa',       label:'R2',x:0.1575,z:-0.07, w:0.14, d:0.21, area:14},
-    {name:'Spálňa',        label:'R3',x:-0.105,z:0.1925,w:0.21, d:0.175,area:16},
-    {name:'Detská izba',   label:'R4',x:0.14,  z:0.1925,w:0.175,d:0.175,area:12},
-    {name:'Kúpeľňa',       label:'R5',x:0.07,  z:0.105, w:0.105,d:0.105,area:7 },
+    {name:'Kuchyňa',      label:'R2',x:0.1575,z:-0.07, w:0.14, d:0.21, area:14},
+    {name:'Spálňa',       label:'R3',x:-0.105,z:0.1925,w:0.21, d:0.175,area:16},
+    {name:'Detská izba',  label:'R4',x:0.14,  z:0.1925,w:0.175,d:0.175,area:12},
+    {name:'Kúpeľňa',      label:'R5',x:0.07,  z:0.105, w:0.105,d:0.105,area:7 },
   ];
 }
 
-function setStep(txt) { document.getElementById('ld-step').textContent = txt; }
+// ── Load property ─────────────────────────────────────────────────────────────
+async function loadProperty() {
+  if (!propId) { setDemo(); return; }
+  try {
+    const res = await fetch('/api/properties/' + propId);
+    if (!res.ok) throw new Error();
+    property = await res.json();
+    rooms = property.rooms && property.rooms.length ? property.rooms : defaultRooms();
+    document.getElementById('sp-name').textContent = property.name || 'AR Prehliadka';
+    document.getElementById('sp-sub').textContent = [property.area ? property.area+' m²' : '', property.price || ''].filter(Boolean).join(' · ') || '3D model nehnuteľnosti';
+    document.getElementById('prop-name').textContent = property.name || '';
+    document.getElementById('prop-meta').textContent = document.getElementById('sp-sub').textContent;
+  } catch {
+    setDemo();
+  }
+  showSplashBtn();
+}
+
+function setDemo() {
+  rooms = defaultRooms();
+  document.getElementById('sp-name').textContent = 'AVRA Demo';
+  document.getElementById('sp-sub').textContent = 'Vzorová AR prehliadka bytu';
+  document.getElementById('prop-name').textContent = 'AVRA Demo';
+  document.getElementById('prop-meta').textContent = 'Vzorový byt';
+  showSplashBtn();
+}
+
+function showSplashBtn() {
+  document.getElementById('sp-btn').style.display = 'block';
+  document.getElementById('sp-skip').style.display = 'block';
+}
 
 // ── Three.js ──────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
 renderer.setClearColor(0, 0);
-
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, 1, 0.001, 200);
-
-function resize() {
+const camera = new THREE.PerspectiveCamera(65, 1, 0.001, 200);
+function resize(){
   renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth / innerHeight;
+  camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
 }
 resize(); addEventListener('resize', resize);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.9));
 const sun = new THREE.DirectionalLight(0xfff8ee, 1.1);
-sun.position.set(2,5,3); sun.castShadow=true; scene.add(sun);
-scene.add(Object.assign(new THREE.DirectionalLight(0xc8e0ff,0.4),{position:{x:-3,y:2,z:-2}}));
+sun.position.set(2,5,3); scene.add(sun);
 
 const modelGroup = new THREE.Group();
 modelGroup.visible = false;
 scene.add(modelGroup);
 
-const retGeo = new THREE.RingGeometry(0.06, 0.085, 36);
-retGeo.rotateX(-Math.PI/2);
-const reticle = new THREE.Mesh(retGeo, new THREE.MeshBasicMaterial({color:0x2ecc9a,side:THREE.DoubleSide}));
-reticle.visible = false; reticle.matrixAutoUpdate = false;
-scene.add(reticle);
-
-// ── Build 3D apartment model ──────────────────────────────────────────────────
-const WALL_H = 0.09;
-const PALETTE = [0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
-const FLOOR_P = [0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
-const ACCENT_P= [0x5b9bd5,0x4caf7d,0xe0a835,0xa07dd0,0x2ecc9a];
+const FLOORS = [0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
+const WALLS  = [0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+const ACCENTS= [0x5b9bd5,0x4caf7d,0xe0a835,0xa07dd0,0x2ecc9a];
 const hitMeshes = [];
 
 function buildModel() {
   while(modelGroup.children.length) modelGroup.remove(modelGroup.children[0]);
   hitMeshes.length = 0;
-
+  const H = 0.09;
   rooms.forEach((r,i) => {
-    const ci = i % PALETTE.length;
-    const floorM = new THREE.MeshLambertMaterial({color:FLOOR_P[ci]});
-    const wallM  = new THREE.MeshLambertMaterial({color:PALETTE[ci]});
-    const accM   = new THREE.MeshBasicMaterial({color:ACCENT_P[ci]});
-
-    // Floor
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.004,r.d), floorM);
-    floor.position.set(r.x,0,r.z); floor.receiveShadow=true;
-    modelGroup.add(floor);
-
-    // Walls
-    [[r.w,WALL_H,0.006,r.x,WALL_H/2,r.z-r.d/2],
-     [r.w,WALL_H,0.006,r.x,WALL_H/2,r.z+r.d/2],
-     [0.006,WALL_H,r.d,r.x-r.w/2,WALL_H/2,r.z],
-     [0.006,WALL_H,r.d,r.x+r.w/2,WALL_H/2,r.z]
+    const ci = i % 5;
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.004,r.d), new THREE.MeshLambertMaterial({color:FLOORS[ci]}));
+    floor.position.set(r.x,0,r.z); modelGroup.add(floor);
+    [[r.w,H,0.005,r.x,H/2,r.z-r.d/2],[r.w,H,0.005,r.x,H/2,r.z+r.d/2],
+     [0.005,H,r.d,r.x-r.w/2,H/2,r.z],[0.005,H,r.d,r.x+r.w/2,H/2,r.z]
     ].forEach(([w,h,d,x,y,z]) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallM);
-      wall.position.set(x,y,z); wall.castShadow=true; modelGroup.add(wall);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({color:WALLS[ci]}));
+      wall.position.set(x,y,z); modelGroup.add(wall);
     });
-
-    // Accent strip
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.003,0.008), accM);
-    strip.position.set(r.x,0.005,r.z-r.d/2+0.004); modelGroup.add(strip);
-
-    // Hit plane
-    const hit = new THREE.Mesh(
-      new THREE.PlaneGeometry(r.w*.9, r.d*.9),
-      new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide})
-    );
-    hit.rotation.x = -Math.PI/2;
-    hit.position.set(r.x,0.006,r.z);
-    hit.userData = r;
-    modelGroup.add(hit);
-    hitMeshes.push(hit);
+    const acc = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.003,0.007), new THREE.MeshBasicMaterial({color:ACCENTS[ci]}));
+    acc.position.set(r.x,0.005,r.z-r.d/2+0.004); modelGroup.add(acc);
+    const hit = new THREE.Mesh(new THREE.PlaneGeometry(r.w*.9,r.d*.9), new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
+    hit.rotation.x=-Math.PI/2; hit.position.set(r.x,0.006,r.z); hit.userData=r;
+    modelGroup.add(hit); hitMeshes.push(hit);
   });
-
   buildMinimap();
 }
 
 function buildMinimap() {
-  const mc = document.getElementById('mm-canvas');
-  const MS = 110;
-  mc.width = mc.height = MS;
-  const ctx = mc.getContext('2d');
+  const mc=document.getElementById('mmc'), MS=100;
+  mc.width=mc.height=MS;
+  const ctx=mc.getContext('2d');
   ctx.fillStyle='#080a10'; ctx.fillRect(0,0,MS,MS);
-  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
-  rooms.forEach(r=>{minX=Math.min(minX,r.x-r.w/2);maxX=Math.max(maxX,r.x+r.w/2);minZ=Math.min(minZ,r.z-r.d/2);maxZ=Math.max(maxZ,r.z+r.d/2);});
-  const pad=8,sc=Math.min((MS-pad*2)/(maxX-minX),(MS-pad*2)/(maxZ-minZ));
+  let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;
+  rooms.forEach(r=>{x0=Math.min(x0,r.x-r.w/2);x1=Math.max(x1,r.x+r.w/2);z0=Math.min(z0,r.z-r.d/2);z1=Math.max(z1,r.z+r.d/2);});
+  const pad=7,sc=Math.min((MS-pad*2)/(x1-x0),(MS-pad*2)/(z1-z0));
+  const cols=['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a'];
   rooms.forEach((r,i)=>{
-    const ci=i%PALETTE.length;
-    const colors=['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a'];
-    const px=pad+(r.x-r.w/2-minX)*sc, pz=pad+(r.z-r.d/2-minZ)*sc;
-    ctx.fillStyle=colors[ci]+'44'; ctx.strokeStyle=colors[ci]; ctx.lineWidth=0.8;
+    ctx.fillStyle=cols[i%5]+'55'; ctx.strokeStyle=cols[i%5]; ctx.lineWidth=0.8;
+    const px=pad+(r.x-r.w/2-x0)*sc, pz=pad+(r.z-r.d/2-z0)*sc;
     ctx.fillRect(px,pz,r.w*sc,r.d*sc); ctx.strokeRect(px,pz,r.w*sc,r.d*sc);
   });
-  document.getElementById('minimap-label').textContent = `${rooms.length} miestností`;
+  document.getElementById('mm-lbl').textContent=rooms.length+' miestností';
 }
 
-// ── AR / Camera ───────────────────────────────────────────────────────────────
-let placed=false, sc=1, hitMat=null;
-let xrSession=null, htSource=null, htRequested=false;
+// ── Start viewer (after user tap) ─────────────────────────────────────────────
+async function startViewer() {
+  document.getElementById('splash').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('mm').style.display='block';
 
-async function startAR() {
-  if(!navigator.xr){ await tryCamera(); return; }
-  const ok = await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
-  if(!ok){ await tryCamera(); return; }
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (!isMobile) {
+    launch3D(); return;
+  }
+
+  // Try camera
   try {
-    xrSession = await navigator.xr.requestSession('immersive-ar',{
-      requiredFeatures:['hit-test'],
-      optionalFeatures:['dom-overlay'],
-      domOverlay:{root:document.getElementById('app')}
-    });
-  } catch{ await tryCamera(); return; }
-  renderer.xr.enabled=true;
-  renderer.xr.setReferenceSpaceType('local');
-  await renderer.xr.setSession(xrSession);
-  show();
-  renderer.setAnimationLoop(xrFrame);
-}
-
-function showIOSPrompt() {
-  // Skryj loading, ukáž špeciálnu iOS uvítaciu obrazovku s tlačidlom
-  document.getElementById('loading').style.display='none';
-  const div = document.createElement('div');
-  div.style.cssText='position:fixed;inset:0;background:#080a10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center;';
-  div.innerHTML=`
-    <div style="width:64px;height:64px;background:#2ecc9a;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000">A</div>
-    <div style="font-size:20px;font-weight:500;color:#fff" id="ios-prop-name">${document.getElementById('pt').textContent || 'AR Prehliadka'}</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.45);max-width:280px;line-height:1.7">Klepnite pre spustenie AR prehliadky. Safari požiada o prístup ku kamere.</div>
-    <button onclick="startIOSCamera(this.parentElement)" style="background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:16px 40px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px">
-      Spustiť AR prehliadku
-    </button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:4px">Vyžaduje prístup ku kamere</div>
-  `;
-  document.body.appendChild(div);
-}
-
-async function startIOSCamera(promptEl) {
-  promptEl.remove();
-  document.getElementById('loading').style.display='flex';
-  setStep('Spúšťam kameru…');
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{exact:'environment'}, width:{ideal:1920}, height:{ideal:1080} }
-    });
+    const constraints = { video:{ facingMode:{ideal:'environment'} } };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     const vid = document.getElementById('vid');
     vid.srcObject = stream;
-    vid.setAttribute('playsinline','');
-    vid.setAttribute('webkit-playsinline','');
     await vid.play();
-    show();
     camera.position.set(0,0.5,1.2); camera.lookAt(0,0,0);
-    hitMat = new THREE.Matrix4().makeTranslation(0,-0.2,-0.5).toArray();
-    document.getElementById('hint').textContent='📱 Klepnite pre umiestnenie modelu';
+    hitMat = new THREE.Matrix4().makeTranslation(0,-0.2,-0.4).toArray();
+    document.getElementById('hint').style.display='block';
     document.getElementById('place-btn').style.display='block';
     renderer.setAnimationLoop(()=>renderer.render(scene,camera));
   } catch(e) {
-    // Kamera zamietnutá — 3D bez kamery
-    document.getElementById('loading').style.display='none';
+    // Camera not available — 3D mode
     launch3D();
   }
 }
+window.startViewer = startViewer;
 
-function xrFrame(ts, frame) {
-  if(!frame) return;
-  const sess = renderer.xr.getSession();
-  if(!htRequested){
-    sess.requestReferenceSpace('viewer').then(vs=>
-      sess.requestHitTestSource({space:vs}).then(s=>{ htSource=s; })
-    );
-    htRequested=true;
-  }
-  if(htSource && !placed){
-    const results = frame.getHitTestResults(htSource);
-    if(results.length){
-      const pose = results[0].getPose(renderer.xr.getReferenceSpace());
-      reticle.visible=true;
-      reticle.matrix.fromArray(pose.transform.matrix);
-      hitMat = pose.transform.matrix.slice();
-      document.getElementById('hint').style.opacity='0.9';
-      document.getElementById('place-btn').style.display='block';
-    } else {
-      reticle.visible=false;
-      document.getElementById('place-btn').style.display='none';
-    }
-  }
-  renderer.render(scene, camera);
-}
-
-async function tryCamera() {
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isMobile) { launch3D(); return; }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
-    });
-    document.getElementById('vid').srcObject = stream;
-    await document.getElementById('vid').play();
-    show();
-    camera.position.set(0,0.6,1.5); camera.lookAt(0,0,0);
-    hitMat = new THREE.Matrix4().makeTranslation(0,-0.3,-0.5).toArray();
-    document.getElementById('hint').textContent='📱 Klepnite pre umiestnenie modelu';
-    document.getElementById('place-btn').style.display='block';
-    renderer.setAnimationLoop(()=>renderer.render(scene,camera));
-  } catch {
-    launch3D();
-  }
-}
-
-function show() {
+function launch3D() {
+  document.getElementById('splash').style.display='none';
   document.getElementById('app').style.display='block';
-  document.getElementById('loading').style.display='none';
-  document.getElementById('minimap').style.display='block';
+  document.getElementById('mm').style.display='block';
+  document.getElementById('hint').style.display='none';
+  document.getElementById('place-btn').style.display='none';
+  document.getElementById('ctrl').style.display='flex';
+  modelGroup.position.set(0,0,0);
+  modelGroup.visible=true;
+  placed=true;
+  camera.position.set(0.4,0.5,0.9); camera.lookAt(0,0,0);
+  let drag=false,lx=0,ly=0;
+  const mv=(cx,cy)=>{
+    if(!drag)return;
+    modelGroup.rotation.y+=(cx-lx)*.012;
+    lx=cx;ly=cy;
+  };
+  canvas.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
+  canvas.addEventListener('touchmove',e=>{mv(e.touches[0].clientX,e.touches[0].clientY);e.preventDefault();},{passive:false});
+  canvas.addEventListener('touchend',()=>drag=false);
+  canvas.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;});
+  canvas.addEventListener('mousemove',e=>mv(e.clientX,e.clientY));
+  canvas.addEventListener('mouseup',()=>drag=false);
+  renderer.setAnimationLoop(()=>renderer.render(scene,camera));
 }
+window.launch3D = launch3D;
 
 function place() {
-  if(!hitMat) return;
+  if(!hitMat)return;
   const m=new THREE.Matrix4().fromArray(hitMat);
   const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
   m.decompose(p,q,s);
   modelGroup.position.copy(p); modelGroup.quaternion.copy(q);
-  modelGroup.visible=true; reticle.visible=false; placed=true;
-  document.getElementById('hint').style.opacity='0';
+  modelGroup.visible=true; placed=true;
+  document.getElementById('hint').style.display='none';
   document.getElementById('place-btn').style.display='none';
   document.getElementById('ctrl').style.display='flex';
 }
+window.place=place;
 
-function launch3D() {
-  document.getElementById('fallback').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('minimap').style.display='block';
-  camera.position.set(0.5,0.6,1.0); camera.lookAt(0,0,0);
-  modelGroup.position.set(0,0,0); modelGroup.visible=true; placed=true;
-  document.getElementById('hint').style.opacity='0';
-  document.getElementById('place-btn').style.display='none';
-  document.getElementById('ctrl').style.display='flex';
-  let drag=false,lx=0;
-  const mv=(cx)=>{if(!drag)return;modelGroup.rotation.y+=(cx-lx)*.012;lx=cx;};
-  canvas.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;},{passive:true});
-  canvas.addEventListener('touchmove',e=>{mv(e.touches[0].clientX);e.preventDefault();},{passive:false});
-  canvas.addEventListener('touchend',()=>drag=false);
-  canvas.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;});
-  canvas.addEventListener('mousemove',e=>mv(e.clientX));
-  canvas.addEventListener('mouseup',()=>drag=false);
-  renderer.setAnimationLoop(()=>renderer.render(scene,camera));
-}
-
-window.place=place; window.launch3D=launch3D;
-window.scUp=()=>{sc=Math.min(4,sc+0.2);modelGroup.scale.setScalar(sc);};
-window.scDn=()=>{sc=Math.max(0.1,sc-0.2);modelGroup.scale.setScalar(sc);};
+window.scUp=()=>{modelSc=Math.min(4,modelSc+0.2);modelGroup.scale.setScalar(modelSc);};
+window.scDn=()=>{modelSc=Math.max(0.1,modelSc-0.2);modelGroup.scale.setScalar(modelSc);};
 window.rotL=()=>modelGroup.rotation.y+=Math.PI/8;
 window.rotR=()=>modelGroup.rotation.y-=Math.PI/8;
-window.reset=()=>{placed=false;modelGroup.visible=false;reticle.visible=true;document.getElementById('ctrl').style.display='none';document.getElementById('hint').style.opacity='0.9';};
+window.resetView=()=>{placed=false;modelGroup.visible=false;document.getElementById('ctrl').style.display='none';document.getElementById('hint').style.display='block';document.getElementById('place-btn').style.display='block';};
 
-// ── Tap detection ─────────────────────────────────────────────────────────────
+// ── Tap rooms ─────────────────────────────────────────────────────────────────
 const ray=new THREE.Raycaster(), pt=new THREE.Vector2();
 function tap(cx,cy){
   if(!placed)return;
   pt.x=(cx/innerWidth)*2-1; pt.y=-(cy/innerHeight)*2+1;
   ray.setFromCamera(pt,camera);
   const hits=ray.intersectObjects(hitMeshes);
-  if(hits.length) showTip(hits[0].object.userData);
+  if(hits.length){
+    const r=hits[0].object.userData;
+    document.getElementById('tip-name').textContent=r.name;
+    document.getElementById('tip-area').textContent=r.area?r.area.toFixed(0)+' m²':'';
+    document.getElementById('tip').style.display='block';
+  }
 }
 canvas.addEventListener('click',e=>tap(e.clientX,e.clientY));
-canvas.addEventListener('touchend',e=>{if(e.changedTouches.length)tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);});
-
-function showTip(r){
-  document.getElementById('tt-label').textContent=r.label||'';
-  document.getElementById('tt-name').textContent=r.name;
-  document.getElementById('tt-area').textContent=r.area?r.area.toFixed(0):'—';
-  document.getElementById('tooltip').style.display='block';
-}
-function closeTip(){document.getElementById('tooltip').style.display='none';}
-window.closeTip=closeTip;
+canvas.addEventListener('touchend',e=>{
+  if(e.changedTouches.length && document.getElementById('tip').style.display==='none')
+    tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-(async () => {
-  await loadProperty();
-  buildModel();
-  setStep('Spúšťam prehliadku…');
-  await new Promise(r=>setTimeout(r,600));
-
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isIOS    = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  if (!isMobile) {
-    // Desktop — priamo 3D
-    launch3D(); return;
-  }
-
-  if (isIOS) {
-    // iOS — ukáž tlačidlo pre spustenie kamery (Safari vyžaduje user gesture)
-    showIOSPrompt(); return;
-  }
-
-  // Android — skús WebXR, fallback na kameru
-  await startAR();
-})();
+loadProperty().then(()=>buildModel());
 </script>
 </body>
 </html>
