@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AVRA — AR Prehliadka</title>
-<script src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;height:100vh;overflow:hidden;color:#fff}
+body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;height:100vh;overflow:hidden;color:#fff;touch-action:none}
 
 #splash{position:fixed;inset:0;background:#080a10;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
 .sp-mark{width:64px;height:64px;background:#2ecc9a;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000}
@@ -17,52 +17,40 @@ body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,s
 .sp-btn{background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:16px 44px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;width:100%;max-width:280px;animation:glow 2s ease-out infinite}
 @keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 18px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
 .sp-skip{font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;text-decoration:underline}
-.sp-loading{font-size:12px;color:rgba(255,255,255,.3)}
+.sp-status{font-size:12px;color:rgba(255,255,255,.3)}
 
-#viewer-wrap{position:fixed;inset:0;display:none;flex-direction:column}
+#app{position:fixed;inset:0;display:none;flex-direction:column}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 
-model-viewer{
-  width:100%;flex:1;
-  --poster-color:#080a10;
-  background:#080a10;
-}
-
-#hud{position:absolute;top:0;left:0;right:0;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);padding:14px 16px 40px;pointer-events:none}
+#hud{position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);padding:14px 16px 40px;pointer-events:none}
 .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,154,.15);border:1px solid rgba(46,204,154,.3);color:#2ecc9a;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:6px}
 .bdot{width:5px;height:5px;background:#2ecc9a;border-radius:50%;animation:blink 2s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 #pname{font-size:19px;font-weight:500}
 #pmeta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
 
-#bottom-bar{position:absolute;bottom:0;left:0;right:0;padding:16px;display:flex;gap:10px;justify-content:center;background:linear-gradient(to top,rgba(0,0,0,.6),transparent)}
+#mode-bar{position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px}
+.mode-btn{background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:99px;padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer}
+.mode-btn.active{background:rgba(46,204,154,.2);border-color:rgba(46,204,154,.5);color:#2ecc9a}
 
-.ar-btn{
-  background:#2ecc9a;color:#000;border:none;border-radius:99px;
-  padding:13px 28px;font-size:14px;font-weight:600;font-family:inherit;
-  cursor:pointer;display:flex;align-items:center;gap:8px;
-}
-.ar-btn svg{width:18px;height:18px}
-.ar-btn:disabled{opacity:.4;cursor:not-allowed}
+#hint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none;text-align:center}
+#place-btn{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 36px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;animation:glow 2s ease-out infinite}
 
-.ctrl-btn{
-  background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
-  border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:99px;
-  padding:13px 20px;font-size:13px;font-family:inherit;cursor:pointer;
-}
+#ctrl{position:absolute;bottom:28px;right:12px;z-index:10;display:none;flex-direction:column;gap:8px}
+.cb{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none}
 
-#ar-hint{
-  position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,.7);backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,.12);border-radius:99px;
-  padding:8px 18px;font-size:12px;white-space:nowrap;
-  opacity:0;transition:opacity .4s;pointer-events:none;
-}
+#tip{position:absolute;left:12px;right:60px;bottom:28px;z-index:20;display:none;background:rgba(8,10,16,.92);backdrop-filter:blur(12px);border:1px solid rgba(46,204,154,.3);border-radius:14px;padding:16px}
+.tip-name{font-size:17px;font-weight:500;color:#2ecc9a;margin-bottom:3px}
+.tip-area{font-size:13px;color:rgba(255,255,255,.5)}
+.tip-close{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);margin-top:8px}
 
-#mm{position:absolute;top:80px;right:12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden}
+#mm{position:absolute;top:80px;right:12px;z-index:10;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;display:none}
 #mmc{width:100px;display:block}
 #mmlbl{font-size:9px;color:rgba(255,255,255,.35);text-align:center;padding:3px 0}
 
-#no-model{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:13px;text-align:center;padding:32px;pointer-events:none}
+/* AR button (model-viewer style) */
+#ar-launch{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 28px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;align-items:center;gap:8px}
 </style>
 </head>
 <body>
@@ -71,38 +59,14 @@ model-viewer{
   <div class="sp-mark">A</div>
   <div class="sp-title" id="sp-title">AVRA Digital</div>
   <div class="sp-meta" id="sp-meta">Načítavam…</div>
-  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">
-    Otvoriť AR prehliadku
-  </button>
-  <div class="sp-loading" id="sp-loading">Načítavam model…</div>
-  <div class="sp-skip" id="sp-skip" onclick="startViewer()" style="display:none">Pokračovať bez AR</div>
+  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">Otvoriť AR prehliadku</button>
+  <div class="sp-skip" id="sp-skip" onclick="launch3D()" style="display:none">Zobraziť len 3D model</div>
+  <div class="sp-status" id="sp-status">Načítavam model…</div>
 </div>
 
-<div id="viewer-wrap">
-  <model-viewer
-    id="mv"
-    camera-controls
-    touch-action="pan-y"
-    auto-rotate
-    auto-rotate-delay="3000"
-    rotation-per-second="20deg"
-    shadow-intensity="1"
-    shadow-softness="0.8"
-    environment-image="neutral"
-    exposure="1"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    ar-scale="fixed"
-    alt="3D model bytu"
-  >
-    <div id="no-model" slot="poster">Pripravujem 3D model…</div>
-    <button slot="ar-button" class="ar-btn" id="ar-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-      </svg>
-      Zobraziť v AR
-    </button>
-  </model-viewer>
+<div id="app">
+  <video id="vid" autoplay playsinline muted webkit-playsinline></video>
+  <canvas id="c"></canvas>
 
   <div id="hud">
     <div class="badge"><div class="bdot"></div>AVRA AR</div>
@@ -110,23 +74,39 @@ model-viewer{
     <div id="pmeta"></div>
   </div>
 
-  <div id="ar-hint">Klepnite na "Zobraziť v AR" pre AR prehliadku</div>
+  <div id="mode-bar">
+    <button class="mode-btn active" id="mb-3d" onclick="setMode('3d')">3D</button>
+    <button class="mode-btn" id="mb-cam" onclick="setMode('cam')">AR kamera</button>
+  </div>
+
+  <div id="hint">📱 Namierte kameru na podlahu a klepnite</div>
+  <button id="place-btn" onclick="place()">Zakotviť model</button>
+
+  <div id="ctrl">
+    <div class="cb" onclick="scUp()">+</div>
+    <div class="cb" onclick="scDn()">−</div>
+    <div class="cb" onclick="rotL()">↺</div>
+    <div class="cb" onclick="rotR()">↻</div>
+    <div class="cb" onclick="reanchor()" style="font-size:13px;color:#2ecc9a">⚓</div>
+  </div>
+
+  <div id="tip">
+    <div class="tip-name" id="tip-name"></div>
+    <div class="tip-area" id="tip-area"></div>
+    <div class="tip-close" onclick="document.getElementById('tip').style.display='none'">✕ zavrieť</div>
+  </div>
 
   <div id="mm"><canvas id="mmc"></canvas><div id="mmlbl"></div></div>
-
-  <div id="bottom-bar">
-    <button class="ctrl-btn" onclick="mv.resetTurntableRotation()">⟳ Reset</button>
-    <button class="ctrl-btn" onclick="toggleAutoRotate()">⏸ Auto</button>
-  </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const propId = new URLSearchParams(location.search).get('id');
-const mv = document.getElementById('mv');
-let autoRotating = true;
-let property = null;
-let rooms = [];
+let rooms = [], property = null;
+let placed = false, modelSc = 1, hitMat = null;
+let currentMode = '3d';
 
+// ── Defaults ──────────────────────────────────────────────────────────────────
 function defaultRooms(){
   return [
     {name:'Obývacia izba',label:'R1',x:-0.105,z:-0.07, w:0.245,d:0.21, area:28},
@@ -137,119 +117,298 @@ function defaultRooms(){
   ];
 }
 
+// ── Load property ─────────────────────────────────────────────────────────────
 async function loadProperty(){
-  if(!propId){ setFallback(); return; }
+  // Show buttons immediately
+  document.getElementById('sp-btn').style.display = 'block';
+  document.getElementById('sp-skip').style.display = 'block';
+
+  if(!propId){ setDemo(); return; }
   try{
-    const res=await fetch('/api/properties/'+propId);
+    const res = await fetch('/api/properties/'+propId);
     if(!res.ok) throw new Error('HTTP '+res.status);
-    property=await res.json();
-    rooms=property.rooms&&property.rooms.length?property.rooms:defaultRooms();
-
-    document.getElementById('sp-title').textContent=property.name||'AR Prehliadka';
-    document.getElementById('pname').textContent=property.name||'';
-    const meta=[property.area?property.area+' m²':'',property.price||''].filter(Boolean).join(' · ');
-    document.getElementById('sp-meta').textContent=meta||'3D model nehnuteľnosti';
-    document.getElementById('pmeta').textContent=meta;
-
-    // Load GLB if available
-    const glbUrl=property.glb_url||property.glbUrl;
-    if(glbUrl){
-      console.log('Loading GLB:',glbUrl);
-      mv.src=glbUrl;
-      document.getElementById('sp-loading').textContent='Model pripravený ✓';
-    } else {
-      // Fallback: generate inline 3D from rooms data using Three.js
-      document.getElementById('sp-loading').textContent='Generujem model…';
-      await loadFallbackViewer();
-    }
+    property = await res.json();
+    rooms = (property.rooms && property.rooms.length >= 2) ? property.rooms : defaultRooms();
+    const meta = [property.area?property.area+' m²':'', property.price||''].filter(Boolean).join(' · ');
+    document.getElementById('sp-title').textContent = property.name || 'AR Prehliadka';
+    document.getElementById('sp-meta').textContent  = meta || '3D model nehnuteľnosti';
+    document.getElementById('pname').textContent = property.name || '';
+    document.getElementById('pmeta').textContent = meta;
+    document.getElementById('sp-status').textContent = rooms.length + ' miestností ✓';
   }catch(e){
-    console.error('Load error:',e);
-    setFallback();
+    console.warn('Property load error:', e.message);
+    setDemo();
   }
+}
+
+function setDemo(){
+  rooms = defaultRooms();
+  document.getElementById('sp-title').textContent = 'AVRA Demo';
+  document.getElementById('sp-meta').textContent  = 'Vzorová AR prehliadka';
+  document.getElementById('pname').textContent = 'AVRA Demo';
+  document.getElementById('sp-status').textContent = 'Demo · 5 miestností';
+}
+
+// ── Three.js ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0, 0);
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(65, 1, 0.001, 200);
+
+function resize(){
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+resize(); addEventListener('resize', resize);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+const sun = new THREE.DirectionalLight(0xfff8ee, 1.1);
+sun.position.set(2,5,3); sun.castShadow=true; scene.add(sun);
+const fill = new THREE.DirectionalLight(0xc8e0ff, 0.35);
+fill.position.set(-2,3,-2); scene.add(fill);
+
+const modelGroup = new THREE.Group();
+modelGroup.visible = false;
+scene.add(modelGroup);
+
+// Orbit state
+const orbit = {
+  theta: Math.PI/4, phi: Math.PI/3, radius: 0.9,
+  target: new THREE.Vector3(),
+  minPhi:0.05, maxPhi:Math.PI/2-0.05,
+  minR:0.15, maxR:3.5
+};
+function orbitUpdate(){
+  camera.position.set(
+    orbit.target.x + orbit.radius*Math.sin(orbit.phi)*Math.sin(orbit.theta),
+    orbit.target.y + orbit.radius*Math.cos(orbit.phi),
+    orbit.target.z + orbit.radius*Math.sin(orbit.phi)*Math.cos(orbit.theta)
+  );
+  camera.lookAt(orbit.target);
+}
+
+// Colors
+const FLOORS  = [0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
+const WALLS   = [0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+const ACCENTS = [0x5b9bd5,0x4caf7d,0xe0a835,0xa07dd0,0x2ecc9a];
+const hitMeshes = [];
+
+function buildModel(){
+  while(modelGroup.children.length) modelGroup.remove(modelGroup.children[0]);
+  hitMeshes.length = 0;
+  const H=0.09, T=0.006, FT=0.004;
+
+  rooms.forEach((r,i)=>{
+    const ci=i%5, {x,z,w,d}=r;
+    const fm=new THREE.MeshLambertMaterial({color:FLOORS[ci]});
+    const wm=new THREE.MeshLambertMaterial({color:WALLS[ci]});
+    const am=new THREE.MeshBasicMaterial({color:ACCENTS[ci]});
+
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(w,FT,d),fm);
+    floor.position.set(x,0,z); floor.receiveShadow=true; modelGroup.add(floor);
+
+    [[w,H,T,x,H/2,z-d/2],[w,H,T,x,H/2,z+d/2],[T,H,d,x-w/2,H/2,z],[T,H,d,x+w/2,H/2,z]].forEach(([sw,sh,sd,px,py,pz])=>{
+      const wall=new THREE.Mesh(new THREE.BoxGeometry(sw,sh,sd),wm);
+      wall.position.set(px,py,pz); wall.castShadow=true; modelGroup.add(wall);
+    });
+
+    const acc=new THREE.Mesh(new THREE.BoxGeometry(w*.8,0.003,0.007),am);
+    acc.position.set(x,FT+0.001,z-d/2+T/2); modelGroup.add(acc);
+
+    const hit=new THREE.Mesh(new THREE.PlaneGeometry(w*.9,d*.9),new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
+    hit.rotation.x=-Math.PI/2; hit.position.set(x,0.006,z); hit.userData=r;
+    modelGroup.add(hit); hitMeshes.push(hit);
+  });
+
   buildMinimap();
-  showSplashBtn();
 }
 
-function setFallback(){
-  rooms=defaultRooms();
-  document.getElementById('sp-title').textContent='AVRA Demo';
-  document.getElementById('sp-meta').textContent='Vzorová AR prehliadka';
-  document.getElementById('pname').textContent='AVRA Demo';
-  document.getElementById('pmeta').textContent='Vzorový byt';
-  document.getElementById('sp-loading').textContent='Demo model';
-  loadFallbackViewer();
-}
-
-// Fallback: show Three.js viewer when no GLB available
-async function loadFallbackViewer(){
-  mv.removeAttribute('src');
-  mv.style.display='none';
-  document.getElementById('no-model').style.pointerEvents='auto';
-  document.getElementById('no-model').innerHTML='<div style="max-width:240px"><div style="font-size:32px;margin-bottom:8px">📐</div>Pôdorys sa spracúva.<br>Skúste znova o chvíľu.</div>';
-}
-
-function showSplashBtn(){
-  document.getElementById('sp-btn').style.display='block';
-  document.getElementById('sp-skip').style.display='block';
-  document.getElementById('sp-loading').style.display='none';
-}
-
-function startViewer(){
-  document.getElementById('splash').style.display='none';
-  document.getElementById('viewer-wrap').style.display='flex';
-
-  // Show AR hint after 2s
-  setTimeout(()=>{
-    const hint=document.getElementById('ar-hint');
-    hint.style.opacity='1';
-    setTimeout(()=>hint.style.opacity='0',4000);
-  },2000);
-}
-window.startViewer=startViewer;
-
-function toggleAutoRotate(){
-  autoRotating=!autoRotating;
-  mv.autoRotate=autoRotating;
-}
-
-// model-viewer events
-mv.addEventListener('load',()=>{
-  console.log('Model loaded');
-  document.getElementById('sp-loading').textContent='Model pripravený ✓';
-  showSplashBtn();
-});
-
-mv.addEventListener('error',(e)=>{
-  console.error('Model error:',e);
-  loadFallbackViewer();
-  showSplashBtn();
-});
-
-mv.addEventListener('ar-status',(e)=>{
-  console.log('AR status:',e.detail.status);
-});
-
-// Minimap
 function buildMinimap(){
   const mc=document.getElementById('mmc'),MS=100;
   mc.width=mc.height=MS;
   const ctx=mc.getContext('2d');
-  ctx.fillStyle='#080a10';ctx.fillRect(0,0,MS,MS);
+  ctx.fillStyle='#080a10'; ctx.fillRect(0,0,MS,MS);
   if(!rooms.length)return;
   let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;
   rooms.forEach(r=>{x0=Math.min(x0,r.x-r.w/2);x1=Math.max(x1,r.x+r.w/2);z0=Math.min(z0,r.z-r.d/2);z1=Math.max(z1,r.z+r.d/2);});
-  const pad=8,sc=Math.min((MS-pad*2)/(x1-x0||1),(MS-pad*2)/(z1-z0||1));
+  const pad=8,sc=Math.min((MS-pad*2)/Math.max(x1-x0,.01),(MS-pad*2)/Math.max(z1-z0,.01));
   const cols=['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a'];
   rooms.forEach((r,i)=>{
-    ctx.fillStyle=cols[i%5]+'55';ctx.strokeStyle=cols[i%5];ctx.lineWidth=0.8;
     const px=pad+(r.x-r.w/2-x0)*sc,pz=pad+(r.z-r.d/2-z0)*sc;
-    ctx.fillRect(px,pz,r.w*sc,r.d*sc);ctx.strokeRect(px,pz,r.w*sc,r.d*sc);
+    ctx.fillStyle=cols[i%5]+'55'; ctx.strokeStyle=cols[i%5]; ctx.lineWidth=0.8;
+    ctx.fillRect(px,pz,r.w*sc,r.d*sc); ctx.strokeRect(px,pz,r.w*sc,r.d*sc);
   });
   document.getElementById('mmlbl').textContent=rooms.length+' miestností';
 }
 
+// ── Input handling ────────────────────────────────────────────────────────────
+let drag=false, lastX=0, lastY=0, lastDist=null, tapMoved=false;
+
+function onTouchStart(e){
+  if(!placed)return;
+  if(e.touches.length===1){drag=true;tapMoved=false;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}
+  if(e.touches.length===2) lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+}
+function onTouchMove(e){
+  if(!placed)return; e.preventDefault();
+  if(e.touches.length===1&&drag){
+    const dx=e.touches[0].clientX-lastX,dy=e.touches[0].clientY-lastY;
+    if(Math.abs(dx)+Math.abs(dy)>3)tapMoved=true;
+    orbit.theta-=dx*0.008;
+    orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*0.008));
+    lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
+    orbitUpdate();
+  }
+  if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(lastDist){orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+(lastDist-d)*0.003));orbitUpdate();}
+    lastDist=d;
+  }
+}
+function onTouchEnd(e){
+  drag=false; lastDist=null;
+  if(!tapMoved&&e.changedTouches.length===1&&placed)tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+}
+
+let mdown=false;
+canvas.addEventListener('mousedown',e=>{if(!placed)return;mdown=true;tapMoved=false;lastX=e.clientX;lastY=e.clientY;});
+canvas.addEventListener('mousemove',e=>{
+  if(!mdown||!placed)return;
+  const dx=e.clientX-lastX,dy=e.clientY-lastY;
+  if(Math.abs(dx)+Math.abs(dy)>3)tapMoved=true;
+  orbit.theta-=dx*0.006; orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*0.006));
+  lastX=e.clientX;lastY=e.clientY; orbitUpdate();
+});
+canvas.addEventListener('mouseup',e=>{if(!tapMoved&&placed)tap(e.clientX,e.clientY);mdown=false;});
+canvas.addEventListener('wheel',e=>{if(!placed)return;orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+e.deltaY*0.001));orbitUpdate();},{passive:true});
+canvas.addEventListener('touchstart',onTouchStart,{passive:false});
+canvas.addEventListener('touchmove',onTouchMove,{passive:false});
+canvas.addEventListener('touchend',onTouchEnd,{passive:false});
+
+// Tap rooms
+const ray=new THREE.Raycaster(),pt=new THREE.Vector2();
+function tap(cx,cy){
+  pt.x=(cx/innerWidth)*2-1; pt.y=-(cy/innerHeight)*2+1;
+  ray.setFromCamera(pt,camera);
+  const hits=ray.intersectObjects(hitMeshes);
+  if(hits.length){
+    const r=hits[0].object.userData;
+    document.getElementById('tip-name').textContent=r.name;
+    document.getElementById('tip-area').textContent=r.area?r.area.toFixed(0)+' m²':'';
+    document.getElementById('tip').style.display='block';
+  }else{
+    document.getElementById('tip').style.display='none';
+  }
+}
+
+// ── Modes ─────────────────────────────────────────────────────────────────────
+function setMode(mode){
+  currentMode=mode;
+  document.getElementById('mb-3d').classList.toggle('active',mode==='3d');
+  document.getElementById('mb-cam').classList.toggle('active',mode==='cam');
+  if(mode==='3d'){
+    stopCamera();
+    launch3D();
+  } else {
+    startCamera();
+  }
+}
+window.setMode=setMode;
+
+let cameraStream=null;
+async function startCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    cameraStream=stream;
+    const vid=document.getElementById('vid');
+    vid.srcObject=stream; vid.setAttribute('playsinline','');
+    await vid.play();
+    // Reset placement for camera mode
+    if(placed){
+      placed=false; modelGroup.visible=false;
+      document.getElementById('ctrl').style.display='none';
+    }
+    document.getElementById('hint').style.display='block';
+    document.getElementById('place-btn').style.display='block';
+    hitMat=new THREE.Matrix4().makeTranslation(0,-0.2,-0.5).toArray();
+    camera.position.set(0,0.5,1.2); camera.lookAt(0,0,0);
+  }catch(e){
+    console.warn('Camera error:',e.message);
+    setMode('3d');
+  }
+}
+
+function stopCamera(){
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
+  document.getElementById('vid').srcObject=null;
+  document.getElementById('hint').style.display='none';
+  document.getElementById('place-btn').style.display='none';
+}
+
+function place(){
+  if(!hitMat)return;
+  const m=new THREE.Matrix4().fromArray(hitMat);
+  const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
+  m.decompose(p,q,s);
+  modelGroup.position.copy(p); modelGroup.quaternion.copy(q);
+  modelGroup.visible=true; placed=true;
+  orbit.target.copy(p).add(new THREE.Vector3(0,0.04,0));
+  document.getElementById('hint').style.display='none';
+  document.getElementById('place-btn').style.display='none';
+  document.getElementById('ctrl').style.display='flex';
+  orbitUpdate();
+}
+window.place=place;
+
+function reanchor(){
+  placed=false; modelGroup.visible=false;
+  document.getElementById('ctrl').style.display='none';
+  if(currentMode==='cam'){
+    document.getElementById('hint').style.display='block';
+    document.getElementById('place-btn').style.display='block';
+  }
+}
+window.reanchor=reanchor;
+
+function launch3D(){
+  stopCamera();
+  modelGroup.position.set(0,0,0); modelGroup.quaternion.identity();
+  modelGroup.visible=true; placed=true;
+  orbit.target.set(0,0.04,0); orbit.radius=0.9;
+  orbit.theta=Math.PI/4; orbit.phi=Math.PI/3;
+  document.getElementById('hint').style.display='none';
+  document.getElementById('place-btn').style.display='none';
+  document.getElementById('ctrl').style.display='flex';
+  orbitUpdate();
+}
+window.launch3D=launch3D;
+
+window.scUp=()=>{modelSc=Math.min(4,modelSc+0.2);modelGroup.scale.setScalar(modelSc);orbit.radius=Math.min(orbit.maxR,orbit.radius*1.1);orbitUpdate();};
+window.scDn=()=>{modelSc=Math.max(0.1,modelSc-0.2);modelGroup.scale.setScalar(modelSc);orbit.radius=Math.max(orbit.minR,orbit.radius*0.9);orbitUpdate();};
+window.rotL=()=>{orbit.theta+=Math.PI/8;orbitUpdate();};
+window.rotR=()=>{orbit.theta-=Math.PI/8;orbitUpdate();};
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+function startViewer(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('mm').style.display='block';
+  launch3D();
+}
+window.startViewer=startViewer;
+
+renderer.setAnimationLoop(()=>renderer.render(scene,camera));
+
 // Boot
-loadProperty();
+loadProperty().then(()=>{
+  buildModel();
+  orbitUpdate();
+});
 </script>
 </body>
 </html>
