@@ -143,6 +143,10 @@ function defaultRooms() {
 }
 
 async function loadProperty() {
+  // Tlačidlá ukáž hneď — nečakaj na API
+  document.getElementById('sp-btn').style.display = 'block';
+  document.getElementById('sp-skip').style.display = 'block';
+
   if (!propId) { setDemo(); return; }
   try {
     const res = await fetch('/api/properties/' + propId);
@@ -155,8 +159,6 @@ async function loadProperty() {
     document.getElementById('prop-name').textContent = property.name || '';
     document.getElementById('prop-meta').textContent = meta;
   } catch { setDemo(); }
-  document.getElementById('sp-btn').style.display = 'block';
-  document.getElementById('sp-skip').style.display = 'block';
 }
 
 function setDemo() {
