@@ -10,7 +10,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;overflow:hidden;height:100vh;color:#fff;touch-action:none}
 
-#splash{position:fixed;inset:0;background:#080a10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
+#splash{position:fixed;inset:0;background:#080a10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
 .sp-mark{width:60px;height:60px;background:#2ecc9a;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#000;margin-bottom:4px}
 .sp-title{font-size:20px;font-weight:500}
 .sp-sub{font-size:13px;color:rgba(255,255,255,.4);max-width:260px;line-height:1.7}
@@ -21,72 +21,115 @@ body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,s
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 
+/* HUD top */
 #hud-top{position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);padding:14px 16px 40px;pointer-events:none}
 .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,154,.15);border:1px solid rgba(46,204,154,.3);color:#2ecc9a;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:6px}
-.badge-dot{width:5px;height:5px;border-radius:50%;background:#2ecc9a}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:#2ecc9a;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 #prop-name{font-size:19px;font-weight:500}
 #prop-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
 
-#hint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none}
+/* Mode indicator */
+#mode-badge{position:absolute;top:14px;right:14px;z-index:10;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.6);display:none}
 
+/* Hint */
+#hint{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none;text-align:center}
+
+/* Place button */
 #place-btn{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 36px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;animation:glow 2s ease-out infinite}
 @keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 18px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
 
+/* Controls */
 #ctrl{position:absolute;bottom:32px;right:14px;z-index:10;display:none;flex-direction:column;gap:8px}
-.cb{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cb{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none}
+.cb:active{background:rgba(255,255,255,.15)}
+.cb-reanchor{font-size:11px;font-weight:600;color:#2ecc9a;border-color:rgba(46,204,154,.4)}
 
+/* Gesture hint overlay */
+#gesture-hint{position:absolute;inset:0;z-index:9;pointer-events:none;display:none;align-items:center;justify-content:center}
+.gh-inner{background:rgba(0,0,0,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px 28px;text-align:center}
+.gh-row{display:flex;gap:24px;justify-content:center;margin-bottom:10px}
+.gh-item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.gh-icon{font-size:24px}
+.gh-label{font-size:11px;color:rgba(255,255,255,.5)}
+
+/* Tooltip */
 #tip{position:absolute;left:14px;right:62px;bottom:32px;z-index:20;display:none;background:rgba(8,10,16,.92);backdrop-filter:blur(12px);border:1px solid rgba(46,204,154,.3);border-radius:14px;padding:16px}
 .tip-name{font-size:17px;font-weight:500;color:#2ecc9a;margin-bottom:4px}
 .tip-area{font-size:13px;color:rgba(255,255,255,.5)}
 .tip-close{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);margin-top:8px}
 
+/* Minimap */
 #mm{position:absolute;top:80px;right:12px;z-index:10;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;display:none}
-#mm canvas{width:100px;display:block}
+#mmc{width:100px;display:block}
 #mm-lbl{font-size:9px;color:rgba(255,255,255,.35);text-align:center;padding:3px 0}
+
+/* Reticle pulse */
+#reticle-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;display:none}
+.reticle-ring{width:60px;height:60px;border:2px solid #2ecc9a;border-radius:50%;opacity:.6;animation:reticle-pulse 1.5s ease-out infinite}
+@keyframes reticle-pulse{0%{transform:scale(0.8);opacity:.8}100%{transform:scale(1.4);opacity:0}}
 </style>
 </head>
 <body>
 
-<!-- Splash — vždy ako prvé, vyžaduje klepnutie -->
 <div id="splash">
   <div class="sp-mark">A</div>
   <div class="sp-title" id="sp-name">AVRA Digital</div>
   <div class="sp-sub" id="sp-sub">Načítavam nehnuteľnosť…</div>
-  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">
-    Spustiť AR prehliadku
-  </button>
+  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">Spustiť AR prehliadku</button>
   <div class="sp-skip" id="sp-skip" onclick="launch3D()" style="display:none">Zobraziť len 3D model</div>
 </div>
 
 <div id="app">
   <video id="vid" autoplay playsinline muted webkit-playsinline></video>
   <canvas id="c"></canvas>
+
   <div id="hud-top">
     <div class="badge"><div class="badge-dot"></div>AVRA AR</div>
     <div id="prop-name"></div>
     <div id="prop-meta"></div>
   </div>
-  <div id="hint">📱 Namierte kameru na rovný povrch a klepnite</div>
-  <button id="place-btn" onclick="place()">Umiestniť model</button>
+
+  <div id="mode-badge">🖱 Orbit režim</div>
+
+  <div id="hint">📱 Namierte kameru na podlahu a klepnite</div>
+  <button id="place-btn" onclick="place()">Zakotviť model</button>
+
+  <div id="reticle-hint"><div class="reticle-ring"></div></div>
+
   <div id="ctrl">
+    <div class="cb cb-reanchor" onclick="reanchor()" title="Presunúť kotvu">⚓</div>
     <div class="cb" onclick="scUp()">+</div>
     <div class="cb" onclick="scDn()">−</div>
-    <div class="cb" onclick="rotL()">↺</div>
-    <div class="cb" onclick="rotR()">↻</div>
-    <div class="cb" onclick="resetView()" style="font-size:13px">⟳</div>
+    <div class="cb" onclick="toggleOrbit()" id="orbit-btn" title="Orbit/AR">🔄</div>
   </div>
+
+  <div id="gesture-hint">
+    <div class="gh-inner">
+      <div class="gh-row">
+        <div class="gh-item"><div class="gh-icon">👆</div><div class="gh-label">Ťahaj — rotácia</div></div>
+        <div class="gh-item"><div class="gh-icon">🤏</div><div class="gh-label">Pinch — zoom</div></div>
+        <div class="gh-item"><div class="gh-icon">✌️</div><div class="gh-label">2 prsty — nakláňaj</div></div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3)">Klepni kdekoľvek pre pokračovanie</div>
+    </div>
+  </div>
+
   <div id="tip">
     <div class="tip-name" id="tip-name"></div>
     <div class="tip-area" id="tip-area"></div>
     <div class="tip-close" onclick="document.getElementById('tip').style.display='none'">✕ zavrieť</div>
   </div>
+
   <div id="mm"><canvas id="mmc"></canvas><div id="mm-lbl"></div></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const propId = new URLSearchParams(location.search).get('id');
-let property = null, rooms = [], modelSc = 1, placed = false, hitMat = null;
+let property = null, rooms = [], placed = false, hitMat = null;
+let modelSc = 1;
+let orbitMode = false; // false = AR/camera mode, true = orbit around model
 
 // ── Default rooms ─────────────────────────────────────────────────────────────
 function defaultRooms() {
@@ -99,7 +142,6 @@ function defaultRooms() {
   ];
 }
 
-// ── Load property ─────────────────────────────────────────────────────────────
 async function loadProperty() {
   if (!propId) { setDemo(); return; }
   try {
@@ -107,14 +149,14 @@ async function loadProperty() {
     if (!res.ok) throw new Error();
     property = await res.json();
     rooms = property.rooms && property.rooms.length ? property.rooms : defaultRooms();
+    const meta = [property.area ? property.area+' m²' : '', property.price||''].filter(Boolean).join(' · ');
     document.getElementById('sp-name').textContent = property.name || 'AR Prehliadka';
-    document.getElementById('sp-sub').textContent = [property.area ? property.area+' m²' : '', property.price || ''].filter(Boolean).join(' · ') || '3D model nehnuteľnosti';
+    document.getElementById('sp-sub').textContent = meta || '3D model nehnuteľnosti';
     document.getElementById('prop-name').textContent = property.name || '';
-    document.getElementById('prop-meta').textContent = document.getElementById('sp-sub').textContent;
-  } catch {
-    setDemo();
-  }
-  showSplashBtn();
+    document.getElementById('prop-meta').textContent = meta;
+  } catch { setDemo(); }
+  document.getElementById('sp-btn').style.display = 'block';
+  document.getElementById('sp-skip').style.display = 'block';
 }
 
 function setDemo() {
@@ -122,13 +164,7 @@ function setDemo() {
   document.getElementById('sp-name').textContent = 'AVRA Demo';
   document.getElementById('sp-sub').textContent = 'Vzorová AR prehliadka bytu';
   document.getElementById('prop-name').textContent = 'AVRA Demo';
-  document.getElementById('prop-meta').textContent = 'Vzorový byt';
-  showSplashBtn();
-}
-
-function showSplashBtn() {
-  document.getElementById('sp-btn').style.display = 'block';
-  document.getElementById('sp-skip').style.display = 'block';
+  document.getElementById('prop-meta').textContent = 'Vzorový byt · 5 miestností';
 }
 
 // ── Three.js ──────────────────────────────────────────────────────────────────
@@ -136,22 +172,36 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0, 0);
+renderer.shadowMap.enabled = true;
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(65, 1, 0.001, 200);
-function resize(){
+
+function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth/innerHeight;
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 }
 resize(); addEventListener('resize', resize);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
 const sun = new THREE.DirectionalLight(0xfff8ee, 1.1);
-sun.position.set(2,5,3); scene.add(sun);
+sun.position.set(2,5,3); sun.castShadow=true; scene.add(sun);
+scene.add(Object.assign(new THREE.DirectionalLight(0xc8e0ff,0.35),{position:new THREE.Vector3(-2,3,-2)}));
 
 const modelGroup = new THREE.Group();
 modelGroup.visible = false;
 scene.add(modelGroup);
+
+// Shadow receiver plane
+const shadowPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(5,5),
+  new THREE.ShadowMaterial({opacity:0.25})
+);
+shadowPlane.rotation.x = -Math.PI/2;
+shadowPlane.position.y = -0.002;
+shadowPlane.receiveShadow = true;
+scene.add(shadowPlane);
 
 const FLOORS = [0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
 const WALLS  = [0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
@@ -163,26 +213,33 @@ function buildModel() {
   hitMeshes.length = 0;
   const H = 0.09;
   rooms.forEach((r,i) => {
-    const ci = i % 5;
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.004,r.d), new THREE.MeshLambertMaterial({color:FLOORS[ci]}));
-    floor.position.set(r.x,0,r.z); modelGroup.add(floor);
+    const ci = i%5;
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.004,r.d),
+      new THREE.MeshLambertMaterial({color:FLOORS[ci]}));
+    floor.position.set(r.x,0,r.z); floor.receiveShadow=true; modelGroup.add(floor);
+
     [[r.w,H,0.005,r.x,H/2,r.z-r.d/2],[r.w,H,0.005,r.x,H/2,r.z+r.d/2],
      [0.005,H,r.d,r.x-r.w/2,H/2,r.z],[0.005,H,r.d,r.x+r.w/2,H/2,r.z]
-    ].forEach(([w,h,d,x,y,z]) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({color:WALLS[ci]}));
-      wall.position.set(x,y,z); modelGroup.add(wall);
+    ].forEach(([w,h,d,x,y,z])=>{
+      const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+        new THREE.MeshLambertMaterial({color:WALLS[ci]}));
+      wall.position.set(x,y,z); wall.castShadow=true; modelGroup.add(wall);
     });
-    const acc = new THREE.Mesh(new THREE.BoxGeometry(r.w,0.003,0.007), new THREE.MeshBasicMaterial({color:ACCENTS[ci]}));
+
+    const acc=new THREE.Mesh(new THREE.BoxGeometry(r.w,0.003,0.007),
+      new THREE.MeshBasicMaterial({color:ACCENTS[ci]}));
     acc.position.set(r.x,0.005,r.z-r.d/2+0.004); modelGroup.add(acc);
-    const hit = new THREE.Mesh(new THREE.PlaneGeometry(r.w*.9,r.d*.9), new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
-    hit.rotation.x=-Math.PI/2; hit.position.set(r.x,0.006,r.z); hit.userData=r;
-    modelGroup.add(hit); hitMeshes.push(hit);
+
+    const hit=new THREE.Mesh(new THREE.PlaneGeometry(r.w*.9,r.d*.9),
+      new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
+    hit.rotation.x=-Math.PI/2; hit.position.set(r.x,0.006,r.z);
+    hit.userData=r; modelGroup.add(hit); hitMeshes.push(hit);
   });
   buildMinimap();
 }
 
 function buildMinimap() {
-  const mc=document.getElementById('mmc'), MS=100;
+  const mc=document.getElementById('mmc'),MS=100;
   mc.width=mc.height=MS;
   const ctx=mc.getContext('2d');
   ctx.fillStyle='#080a10'; ctx.fillRect(0,0,MS,MS);
@@ -198,105 +255,260 @@ function buildMinimap() {
   document.getElementById('mm-lbl').textContent=rooms.length+' miestností';
 }
 
-// ── Start viewer (after user tap) ─────────────────────────────────────────────
+// ── Orbit controls (manual camera around anchored model) ──────────────────────
+const orbit = {
+  enabled: false,
+  target: new THREE.Vector3(),
+  theta: Math.PI/4,   // horizontal angle
+  phi: Math.PI/4,     // vertical angle
+  radius: 0.8,
+  minPhi: 0.05,
+  maxPhi: Math.PI/2 - 0.05,
+  minRadius: 0.15,
+  maxRadius: 3.0,
+};
+
+function orbitUpdateCamera() {
+  const t = orbit.target;
+  camera.position.set(
+    t.x + orbit.radius * Math.sin(orbit.phi) * Math.sin(orbit.theta),
+    t.y + orbit.radius * Math.cos(orbit.phi),
+    t.z + orbit.radius * Math.sin(orbit.phi) * Math.cos(orbit.theta)
+  );
+  camera.lookAt(t);
+}
+
+// ── Touch / Mouse input ───────────────────────────────────────────────────────
+let touches = {};
+let lastDist = null;
+let isDragging = false;
+let lastX = 0, lastY = 0;
+let tapTimeout = null;
+let tapMoved = false;
+
+function onTouchStart(e) {
+  if (!placed) return;
+  const t = e.touches;
+  if (t.length === 1) {
+    isDragging = true; tapMoved = false;
+    lastX = t[0].clientX; lastY = t[0].clientY;
+    tapTimeout = setTimeout(()=>{ tapMoved=false; }, 200);
+  }
+  if (t.length === 2) {
+    isDragging = false;
+    lastDist = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  }
+}
+
+function onTouchMove(e) {
+  if (!placed) return;
+  e.preventDefault();
+  const t = e.touches;
+  if (t.length === 1 && isDragging && orbitMode) {
+    const dx = t[0].clientX - lastX;
+    const dy = t[0].clientY - lastY;
+    if (Math.abs(dx)+Math.abs(dy) > 3) tapMoved = true;
+    orbit.theta -= dx * 0.008;
+    orbit.phi = Math.max(orbit.minPhi, Math.min(orbit.maxPhi, orbit.phi - dy*0.008));
+    lastX = t[0].clientX; lastY = t[0].clientY;
+    orbitUpdateCamera();
+  }
+  if (t.length === 2) {
+    const d = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+    if (lastDist) {
+      const delta = lastDist - d;
+      orbit.radius = Math.max(orbit.minRadius, Math.min(orbit.maxRadius, orbit.radius + delta*0.003));
+      orbitUpdateCamera();
+    }
+    lastDist = d;
+  }
+}
+
+function onTouchEnd(e) {
+  if (!placed) return;
+  lastDist = null; isDragging = false;
+  if (!tapMoved && e.changedTouches.length===1) {
+    tap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }
+}
+
+// Mouse for desktop
+let mouseDown = false;
+function onMouseDown(e) { if(!placed||!orbitMode)return; mouseDown=true; lastX=e.clientX; lastY=e.clientY; tapMoved=false; }
+function onMouseMove(e) {
+  if(!mouseDown||!orbitMode)return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY;
+  if(Math.abs(dx)+Math.abs(dy)>3) tapMoved=true;
+  orbit.theta -= dx*0.006;
+  orbit.phi = Math.max(orbit.minPhi, Math.min(orbit.maxPhi, orbit.phi-dy*0.006));
+  lastX=e.clientX; lastY=e.clientY;
+  orbitUpdateCamera();
+}
+function onMouseUp(e) {
+  if(!tapMoved && mouseDown) tap(e.clientX, e.clientY);
+  mouseDown=false;
+}
+function onWheel(e) {
+  if(!placed||!orbitMode)return;
+  orbit.radius = Math.max(orbit.minRadius, Math.min(orbit.maxRadius, orbit.radius+e.deltaY*0.001));
+  orbitUpdateCamera();
+}
+
+canvas.addEventListener('touchstart', onTouchStart, {passive:false});
+canvas.addEventListener('touchmove',  onTouchMove,  {passive:false});
+canvas.addEventListener('touchend',   onTouchEnd,   {passive:false});
+canvas.addEventListener('mousedown',  onMouseDown);
+canvas.addEventListener('mousemove',  onMouseMove);
+canvas.addEventListener('mouseup',    onMouseUp);
+canvas.addEventListener('wheel',      onWheel, {passive:true});
+
+// ── Tap rooms ─────────────────────────────────────────────────────────────────
+const ray = new THREE.Raycaster();
+const pt  = new THREE.Vector2();
+function tap(cx, cy) {
+  if (!placed) return;
+  pt.x = (cx/innerWidth)*2-1;
+  pt.y = -(cy/innerHeight)*2+1;
+  ray.setFromCamera(pt, camera);
+  const hits = ray.intersectObjects(hitMeshes);
+  if (hits.length) {
+    const r = hits[0].object.userData;
+    document.getElementById('tip-name').textContent = r.name;
+    document.getElementById('tip-area').textContent = r.area ? r.area.toFixed(0)+' m²' : '';
+    document.getElementById('tip').style.display = 'block';
+  } else {
+    document.getElementById('tip').style.display = 'none';
+  }
+}
+
+// ── Place / Anchor ────────────────────────────────────────────────────────────
+function place() {
+  if (!hitMat) return;
+  const m = new THREE.Matrix4().fromArray(hitMat);
+  const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+  m.decompose(p, q, s);
+  modelGroup.position.copy(p);
+  modelGroup.quaternion.copy(q);
+  modelGroup.visible = true;
+  placed = true;
+
+  // Set orbit target to model center
+  orbit.target.copy(p).add(new THREE.Vector3(0, 0.05, 0));
+  orbit.radius = 0.9;
+  orbit.theta = Math.PI/4;
+  orbit.phi = Math.PI/3;
+
+  document.getElementById('hint').style.display = 'none';
+  document.getElementById('place-btn').style.display = 'none';
+  document.getElementById('reticle-hint').style.display = 'none';
+  document.getElementById('ctrl').style.display = 'flex';
+
+  // Auto-switch to orbit mode after placing
+  enableOrbit();
+  showGestureHint();
+}
+window.place = place;
+
+function reanchor() {
+  placed = false;
+  orbitMode = false;
+  modelGroup.visible = false;
+  document.getElementById('ctrl').style.display = 'none';
+  document.getElementById('hint').style.display = 'block';
+  document.getElementById('place-btn').style.display = 'block';
+  document.getElementById('reticle-hint').style.display = 'block';
+  document.getElementById('mode-badge').style.display = 'none';
+  document.getElementById('orbit-btn').textContent = '🔄';
+}
+window.reanchor = reanchor;
+
+function enableOrbit() {
+  orbitMode = true;
+  document.getElementById('mode-badge').textContent = '👁 Orbit';
+  document.getElementById('mode-badge').style.display = 'block';
+  document.getElementById('orbit-btn').textContent = '📍';
+  orbitUpdateCamera();
+}
+
+function toggleOrbit() {
+  if (!placed) return;
+  if (orbitMode) {
+    // Switch back to free camera (AR walk-around)
+    orbitMode = false;
+    document.getElementById('mode-badge').textContent = '📷 AR';
+    document.getElementById('orbit-btn').textContent = '🔄';
+  } else {
+    enableOrbit();
+  }
+}
+window.toggleOrbit = toggleOrbit;
+
+function showGestureHint() {
+  const gh = document.getElementById('gesture-hint');
+  gh.style.display = 'flex';
+  gh.addEventListener('click', ()=>{ gh.style.display='none'; }, {once:true});
+  setTimeout(()=>{ gh.style.display='none'; }, 3500);
+}
+
+window.scUp = ()=>{ modelSc=Math.min(4,modelSc+0.2); modelGroup.scale.setScalar(modelSc); orbit.radius=Math.max(orbit.minRadius,orbit.radius*1.15); orbitUpdateCamera(); };
+window.scDn = ()=>{ modelSc=Math.max(0.1,modelSc-0.2); modelGroup.scale.setScalar(modelSc); orbit.radius=Math.min(orbit.maxRadius,orbit.radius*0.87); orbitUpdateCamera(); };
+
+// ── Camera passthrough mode ───────────────────────────────────────────────────
+let cameraMode = false; // using device camera
+
 async function startViewer() {
-  document.getElementById('splash').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('mm').style.display='block';
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('mm').style.display = 'block';
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) { launch3D(); return; }
 
-  if (!isMobile) {
-    launch3D(); return;
-  }
-
-  // Try camera
   try {
-    const constraints = { video:{ facingMode:{ideal:'environment'} } };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ideal:'environment'} }
+    });
     const vid = document.getElementById('vid');
-    vid.srcObject = stream;
+    vid.srcObject = stream; vid.setAttribute('playsinline','');
     await vid.play();
-    camera.position.set(0,0.5,1.2); camera.lookAt(0,0,0);
-    hitMat = new THREE.Matrix4().makeTranslation(0,-0.2,-0.4).toArray();
-    document.getElementById('hint').style.display='block';
-    document.getElementById('place-btn').style.display='block';
+    cameraMode = true;
+
+    // Initial camera position (before placing)
+    camera.position.set(0, 0.5, 1.2); camera.lookAt(0,0,0);
+    hitMat = new THREE.Matrix4().makeTranslation(0,-0.15,-0.4).toArray();
+
+    document.getElementById('hint').style.display = 'block';
+    document.getElementById('place-btn').style.display = 'block';
+    document.getElementById('reticle-hint').style.display = 'block';
     renderer.setAnimationLoop(()=>renderer.render(scene,camera));
-  } catch(e) {
-    // Camera not available — 3D mode
+  } catch {
     launch3D();
   }
 }
 window.startViewer = startViewer;
 
 function launch3D() {
-  document.getElementById('splash').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('mm').style.display='block';
-  document.getElementById('hint').style.display='none';
-  document.getElementById('place-btn').style.display='none';
-  document.getElementById('ctrl').style.display='flex';
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('mm').style.display = 'block';
+  document.getElementById('hint').style.display = 'none';
+  document.getElementById('place-btn').style.display = 'none';
+  document.getElementById('reticle-hint').style.display = 'none';
+  document.getElementById('ctrl').style.display = 'flex';
+
   modelGroup.position.set(0,0,0);
-  modelGroup.visible=true;
-  placed=true;
-  camera.position.set(0.4,0.5,0.9); camera.lookAt(0,0,0);
-  let drag=false,lx=0,ly=0;
-  const mv=(cx,cy)=>{
-    if(!drag)return;
-    modelGroup.rotation.y+=(cx-lx)*.012;
-    lx=cx;ly=cy;
-  };
-  canvas.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
-  canvas.addEventListener('touchmove',e=>{mv(e.touches[0].clientX,e.touches[0].clientY);e.preventDefault();},{passive:false});
-  canvas.addEventListener('touchend',()=>drag=false);
-  canvas.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;});
-  canvas.addEventListener('mousemove',e=>mv(e.clientX,e.clientY));
-  canvas.addEventListener('mouseup',()=>drag=false);
+  modelGroup.visible = true;
+  placed = true;
+  orbit.target.set(0, 0.05, 0);
+  orbit.radius = 0.9;
+  enableOrbit();
+  showGestureHint();
   renderer.setAnimationLoop(()=>renderer.render(scene,camera));
 }
 window.launch3D = launch3D;
 
-function place() {
-  if(!hitMat)return;
-  const m=new THREE.Matrix4().fromArray(hitMat);
-  const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
-  m.decompose(p,q,s);
-  modelGroup.position.copy(p); modelGroup.quaternion.copy(q);
-  modelGroup.visible=true; placed=true;
-  document.getElementById('hint').style.display='none';
-  document.getElementById('place-btn').style.display='none';
-  document.getElementById('ctrl').style.display='flex';
-}
-window.place=place;
-
-window.scUp=()=>{modelSc=Math.min(4,modelSc+0.2);modelGroup.scale.setScalar(modelSc);};
-window.scDn=()=>{modelSc=Math.max(0.1,modelSc-0.2);modelGroup.scale.setScalar(modelSc);};
-window.rotL=()=>modelGroup.rotation.y+=Math.PI/8;
-window.rotR=()=>modelGroup.rotation.y-=Math.PI/8;
-window.resetView=()=>{placed=false;modelGroup.visible=false;document.getElementById('ctrl').style.display='none';document.getElementById('hint').style.display='block';document.getElementById('place-btn').style.display='block';};
-
-// ── Tap rooms ─────────────────────────────────────────────────────────────────
-const ray=new THREE.Raycaster(), pt=new THREE.Vector2();
-function tap(cx,cy){
-  if(!placed)return;
-  pt.x=(cx/innerWidth)*2-1; pt.y=-(cy/innerHeight)*2+1;
-  ray.setFromCamera(pt,camera);
-  const hits=ray.intersectObjects(hitMeshes);
-  if(hits.length){
-    const r=hits[0].object.userData;
-    document.getElementById('tip-name').textContent=r.name;
-    document.getElementById('tip-area').textContent=r.area?r.area.toFixed(0)+' m²':'';
-    document.getElementById('tip').style.display='block';
-  }
-}
-canvas.addEventListener('click',e=>tap(e.clientX,e.clientY));
-canvas.addEventListener('touchend',e=>{
-  if(e.changedTouches.length && document.getElementById('tip').style.display==='none')
-    tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
-});
-
 // ── Boot ──────────────────────────────────────────────────────────────────────
-loadProperty().then(()=>buildModel());
+loadProperty().then(() => buildModel());
 </script>
 </body>
 </html>
