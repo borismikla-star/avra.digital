@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVRA — Editor pôdorysu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+  --accent:#2ecc9a;--text:#e8eaf0;--text2:#8b90a0;--text3:#454a5a;
+  --danger:#e05555;--warn:#e0a835;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* Top bar */
+#topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:13px;flex-shrink:0}
+#prop-name-input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:6px 12px;font-family:inherit;font-size:14px;width:220px;outline:none}
+#prop-name-input:focus{border-color:var(--accent)}
+.sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
+.tool-btn{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;font-size:13px;transition:all .15s}
+.tool-btn:hover{background:var(--bg3);color:var(--text)}
+.tool-btn.active{background:rgba(46,204,154,.12);border-color:rgba(46,204,154,.4);color:var(--accent)}
+.tool-icon{font-size:15px}
+.spacer{flex:1}
+#save-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 18px;font-weight:600;font-family:inherit;font-size:13px;cursor:pointer}
+#save-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Main layout */
+#main{display:grid;grid-template-columns:1fr 300px;flex:1;overflow:hidden}
+
+/* Canvas area */
+#canvas-area{position:relative;overflow:hidden;background:#1a1e28}
+#trace-canvas{width:100%;height:100%;cursor:crosshair;display:block}
+#canvas-area.pan-mode #trace-canvas{cursor:grab}
+#canvas-area.pan-mode.panning #trace-canvas{cursor:grabbing}
+
+/* Floating tools */
+#float-tools{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.ft-btn{width:36px;height:36px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s}
+.ft-btn:hover{background:var(--bg3);color:var(--text)}
+.ft-btn.active{background:rgba(46,204,154,.15);border-color:rgba(46,204,154,.4);color:var(--accent)}
+
+/* Zoom indicator */
+#zoom-indicator{position:absolute;bottom:12px;left:12px;font-size:11px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 10px}
+
+/* Instructions */
+#instructions{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--text2);background:rgba(13,15,20,.85);backdrop-filter:blur(8px);border:1px solid var(--border2);border-radius:99px;padding:6px 16px;white-space:nowrap;pointer-events:none;transition:opacity .3s}
+
+/* Auto-detect progress */
+#auto-bar{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;display:none;align-items:center;gap:10px;font-size:13px}
+.spin{width:14px;height:14px;border:2px solid rgba(46,204,154,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Right panel */
+#panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#preview-3d{flex:1;background:#080a10;position:relative}
+#preview-canvas{width:100%;height:100%;display:block}
+#preview-label{position:absolute;top:8px;left:10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+
+#room-list{padding:12px;border-top:1px solid var(--border);overflow-y:auto;max-height:220px}
+.room-list-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.room-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;cursor:pointer;transition:background .15s}
+.room-item:hover{background:var(--bg3)}
+.room-item.selected{background:rgba(46,204,154,.1)}
+.room-color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.room-info{flex:1;min-width:0}
+.room-name-input{background:transparent;border:none;color:var(--text);font-family:inherit;font-size:13px;width:100%;outline:none;padding:0}
+.room-name-input:focus{color:var(--accent)}
+.room-area{font-size:11px;color:var(--text3)}
+.room-del{width:22px;height:22px;border-radius:4px;background:transparent;border:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+.room-del:hover{background:rgba(224,85,85,.15);color:var(--danger)}
+
+#panel-footer{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.meta-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:6px 10px;font-family:inherit;font-size:13px;outline:none;width:100%}
+.meta-input:focus{border-color:var(--accent)}
+.meta-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <div class="logo">A</div>
+  <input id="prop-name-input" type="text" placeholder="Názov nehnuteľnosti…">
+  <div class="sep"></div>
+
+  <button class="tool-btn active" id="tb-draw" onclick="setTool('draw')">
+    <span class="tool-icon">✏️</span> Kresliť
+  </button>
+  <button class="tool-btn" id="tb-select" onclick="setTool('select')">
+    <span class="tool-icon">↖</span> Vybrať
+  </button>
+  <button class="tool-btn" id="tb-pan" onclick="setTool('pan')">
+    <span class="tool-icon">✋</span> Posúvať
+  </button>
+
+  <div class="sep"></div>
+
+  <button class="tool-btn" onclick="uploadFloorPlan()" title="Nahrať pôdorys ako pozadie">
+    <span class="tool-icon">📐</span> Nahrať pôdorys
+  </button>
+  <button class="tool-btn" id="tb-auto" onclick="autoDetect()" title="Automatická detekcia miestností">
+    <span class="tool-icon">🔍</span> Auto-detekcia
+  </button>
+  <button class="tool-btn" onclick="clearAll()" title="Vymazať všetko">
+    <span class="tool-icon">🗑</span>
+  </button>
+
+  <div class="spacer"></div>
+  <button id="save-btn" onclick="saveProperty()">💾 Uložiť & QR kód</button>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <!-- Canvas -->
+  <div id="canvas-area">
+    <canvas id="trace-canvas"></canvas>
+
+    <div id="float-tools">
+      <div class="ft-btn" onclick="zoomIn()" title="Priblížiť">+</div>
+      <div class="ft-btn" onclick="zoomOut()" title="Oddialiť">−</div>
+      <div class="ft-btn" onclick="resetView()" title="Reset pohľadu">⊙</div>
+      <div class="sep" style="width:100%;height:1px;background:var(--border)"></div>
+      <div class="ft-btn" onclick="undoLast()" title="Späť">↩</div>
+    </div>
+
+    <div id="zoom-indicator">100%</div>
+
+    <div id="instructions">Kliknite pre pridanie bodu — dvojklik alebo Enter pre uzavretie miestnosti</div>
+
+    <div id="auto-bar">
+      <div class="spin"></div>
+      <span id="auto-msg">Analyzujem pôdorys…</span>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div id="panel">
+    <div id="preview-3d">
+      <canvas id="preview-canvas"></canvas>
+      <div id="preview-label">Live 3D náhľad</div>
+    </div>
+
+    <div id="room-list">
+      <div class="room-list-title">Miestnosti</div>
+      <div id="room-items"></div>
+    </div>
+
+    <div id="panel-footer">
+      <div class="meta-row">
+        <div>
+          <div class="meta-label">Rozloha (m²)</div>
+          <input class="meta-input" id="meta-area" type="number" placeholder="78">
+        </div>
+        <div>
+          <div class="meta-label">Cena (€)</div>
+          <input class="meta-input" id="meta-price" type="text" placeholder="189 000">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="floor-file-input" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="onFloorFileSelected(this)">
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const API = () => localStorage.getItem('avra_api') || location.origin;
+const propId = new URLSearchParams(location.search).get('id');
+
+let tool = 'draw';
+let rooms = []; // {id, name, points:[{x,y}], closed, color}
+let currentPoints = []; // points being drawn
+let selectedRoom = null;
+let bgImage = null;
+
+// Viewport
+let viewX = 0, viewY = 0, viewScale = 1;
+let isPanning = false, panStartX = 0, panStartY = 0, panViewX = 0, panViewY = 0;
+let mouseX = 0, mouseY = 0;
+
+const ROOM_NAMES = ['Obývacia izba','Kuchyňa','Spálňa','Detská izba','Kúpeľňa','Chodba','Pracovňa','Jedáleň','WC','Šatník','Terasa','Balkón'];
+const ROOM_COLORS = ['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a','#e05555','#e0a835','#9bd55b','#d55b9b','#5bd5c8'];
+
+let roomCounter = 0;
+function newRoom(pts=[]){
+  return {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name: ROOM_NAMES[roomCounter % ROOM_NAMES.length],
+    points: pts,
+    closed: pts.length >= 3,
+    color: ROOM_COLORS[roomCounter % ROOM_COLORS.length],
+  };
+}
+
+// ── Trace Canvas ──────────────────────────────────────────────────────────────
+const tc = document.getElementById('trace-canvas');
+const ctx = tc.getContext('2d');
+
+function resizeCanvas(){
+  const area = document.getElementById('canvas-area');
+  tc.width  = area.clientWidth;
+  tc.height = area.clientHeight;
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// World ↔ Screen transforms
+function worldToScreen(x,y){ return { x: x*viewScale+viewX, y: y*viewScale+viewY }; }
+function screenToWorld(x,y){ return { x: (x-viewX)/viewScale, y: (y-viewY)/viewScale }; }
+
+function draw(){
+  ctx.clearRect(0,0,tc.width,tc.height);
+
+  // Grid
+  drawGrid();
+
+  // Background image
+  if(bgImage){
+    const sw = bgImage.width*viewScale, sh = bgImage.height*viewScale;
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(bgImage, viewX, viewY, sw, sh);
+    ctx.globalAlpha = 1;
+  }
+
+  // Rooms
+  rooms.forEach(room => drawRoom(room, room === selectedRoom));
+
+  // Current drawing
+  if(currentPoints.length > 0 && tool === 'draw'){
+    drawCurrentPath();
+  }
+
+  // Update zoom indicator
+  document.getElementById('zoom-indicator').textContent = Math.round(viewScale*100)+'%';
+}
+
+function drawGrid(){
+  const gridSize = 50 * viewScale;
+  if(gridSize < 8) return;
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  const startX = ((viewX % gridSize) + gridSize) % gridSize;
+  const startY = ((viewY % gridSize) + gridSize) % gridSize;
+  ctx.beginPath();
+  for(let x = startX; x < tc.width; x += gridSize){ ctx.moveTo(x,0); ctx.lineTo(x,tc.height); }
+  for(let y = startY; y < tc.height; y += gridSize){ ctx.moveTo(0,y); ctx.lineTo(tc.width,y); }
+  ctx.stroke();
+}
+
+function drawRoom(room, selected){
+  if(room.points.length < 2) return;
+  const pts = room.points.map(p => worldToScreen(p.x, p.y));
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+  if(room.closed) ctx.closePath();
+
+  if(room.closed){
+    ctx.fillStyle = room.color + '33';
+    ctx.fill();
+  }
+
+  // Stroke
+  ctx.strokeStyle = selected ? room.color : room.color+'aa';
+  ctx.lineWidth = selected ? 2.5 : 1.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Points
+  pts.forEach((p,i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, selected ? 5 : 3.5, 0, Math.PI*2);
+    ctx.fillStyle = i===0 ? '#2ecc9a' : room.color;
+    ctx.fill();
+    if(selected){
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  });
+
+  // Label
+  if(room.closed){
+    const cx = pts.reduce((s,p)=>s+p.x,0)/pts.length;
+    const cy = pts.reduce((s,p)=>s+p.y,0)/pts.length;
+    ctx.font = `${Math.max(10, 12*viewScale)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = room.color;
+    ctx.fillText(room.name, cx, cy-8*viewScale);
+    const area = calcArea(room.points);
+    if(area > 0){
+      ctx.font = `${Math.max(9,10*viewScale)}px system-ui`;
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillText(area.toFixed(1)+' m²', cx, cy+6*viewScale);
+    }
+  }
+}
+
+function drawCurrentPath(){
+  if(currentPoints.length === 0) return;
+  const pts = currentPoints.map(p => worldToScreen(p.x, p.y));
+  ctx.strokeStyle = '#2ecc9a';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+  // Line to mouse
+  ctx.lineTo(mouseX, mouseY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  pts.forEach((p,i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, i===0?6:4, 0, Math.PI*2);
+    ctx.fillStyle = i===0 ? '#2ecc9a' : '#2ecc9a88';
+    ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // Snap indicator to first point
+  if(currentPoints.length >= 3){
+    const first = worldToScreen(currentPoints[0].x, currentPoints[0].y);
+    const dist = Math.hypot(mouseX-first.x, mouseY-first.y);
+    if(dist < 20){
+      ctx.beginPath();
+      ctx.arc(first.x, first.y, 12, 0, Math.PI*2);
+      ctx.strokeStyle = '#2ecc9a';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3,3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+// ── Canvas Events ─────────────────────────────────────────────────────────────
+tc.addEventListener('mousemove', e => {
+  const rect = tc.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+
+  if(isPanning){
+    viewX = panViewX + (e.clientX - panStartX);
+    viewY = panViewY + (e.clientY - panStartY);
+  }
+  draw();
+});
+
+tc.addEventListener('mousedown', e => {
+  if(tool === 'pan' || e.button === 1){
+    isPanning = true;
+    panStartX = e.clientX; panStartY = e.clientY;
+    panViewX = viewX; panViewY = viewY;
+    document.getElementById('canvas-area').classList.add('panning');
+    return;
+  }
+  if(tool === 'draw' && e.button === 0){
+    const wp = screenToWorld(mouseX, mouseY);
+
+    // Check snap to first point
+    if(currentPoints.length >= 3){
+      const first = worldToScreen(currentPoints[0].x, currentPoints[0].y);
+      if(Math.hypot(mouseX-first.x, mouseY-first.y) < 20){
+        closeCurrentRoom();
+        return;
+      }
+    }
+    currentPoints.push({x: snapToGrid(wp.x), y: snapToGrid(wp.y)});
+    draw();
+  }
+  if(tool === 'select' && e.button === 0){
+    const wp = screenToWorld(mouseX, mouseY);
+    selectedRoom = rooms.find(r => r.closed && pointInPolygon(wp, r.points)) || null;
+    renderRoomList();
+    draw();
+  }
+});
+
+tc.addEventListener('mouseup', () => {
+  isPanning = false;
+  document.getElementById('canvas-area').classList.remove('panning');
+});
+
+tc.addEventListener('dblclick', e => {
+  if(tool === 'draw' && currentPoints.length >= 3){
+    closeCurrentRoom();
+  }
+});
+
+tc.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  const rect = tc.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  viewX = mx - (mx - viewX) * factor;
+  viewY = my - (my - viewY) * factor;
+  viewScale = Math.max(0.1, Math.min(10, viewScale * factor));
+  draw();
+}, {passive:false});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && currentPoints.length >= 3) closeCurrentRoom();
+  if(e.key === 'Escape'){ currentPoints=[]; draw(); }
+  if(e.key === 'z' && (e.ctrlKey||e.metaKey)) undoLast();
+});
+
+// Touch support for mobile
+let touchStartX=0,touchStartY=0,lastTouchDist=null,touchPanX=0,touchPanY=0;
+tc.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if(e.touches.length===1){
+    const t=e.touches[0];
+    const rect=tc.getBoundingClientRect();
+    touchStartX=t.clientX-rect.left; touchStartY=t.clientY-rect.top;
+    touchPanX=viewX; touchPanY=viewY;
+    mouseX=touchStartX; mouseY=touchStartY;
+  }
+  if(e.touches.length===2){
+    lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:false});
+
+tc.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if(e.touches.length===1){
+    const t=e.touches[0];
+    const rect=tc.getBoundingClientRect();
+    mouseX=t.clientX-rect.left; mouseY=t.clientY-rect.top;
+    if(tool==='pan'){
+      viewX=touchPanX+(mouseX-touchStartX);
+      viewY=touchPanY+(mouseY-touchStartY);
+    }
+  }
+  if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(lastTouchDist){
+      const f=d/lastTouchDist;
+      const mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      const my=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      viewX=mx-(mx-viewX)*f; viewY=my-(my-viewY)*f;
+      viewScale=Math.max(0.1,Math.min(10,viewScale*f));
+    }
+    lastTouchDist=d;
+  }
+  draw();
+},{passive:false});
+
+tc.addEventListener('touchend', e => {
+  e.preventDefault();
+  lastTouchDist=null;
+  if(tool==='draw' && e.changedTouches.length===1){
+    const wp=screenToWorld(mouseX,mouseY);
+    if(currentPoints.length>=3){
+      const first=worldToScreen(currentPoints[0].x,currentPoints[0].y);
+      if(Math.hypot(mouseX-first.x,mouseY-first.y)<24){ closeCurrentRoom(); return; }
+    }
+    currentPoints.push({x:snapToGrid(wp.x),y:snapToGrid(wp.y)});
+    draw();
+  }
+},{passive:false});
+
+// ── Helper functions ──────────────────────────────────────────────────────────
+function snapToGrid(v, gridSize=10){ return Math.round(v/gridSize)*gridSize; }
+
+function closeCurrentRoom(){
+  if(currentPoints.length < 3) return;
+  const room = newRoom([...currentPoints]);
+  rooms.push(room);
+  roomCounter++;
+  currentPoints = [];
+  selectedRoom = room;
+  renderRoomList();
+  update3DPreview();
+  draw();
+}
+
+function calcArea(pts){
+  // Shoelace formula in canvas coords, convert to m² (1 unit = 10px = 0.5m)
+  let area = 0;
+  for(let i=0;i<pts.length;i++){
+    const j=(i+1)%pts.length;
+    area += pts[i].x * pts[j].y;
+    area -= pts[j].x * pts[i].y;
+  }
+  area = Math.abs(area)/2;
+  // Convert: assume 100px = 5m (1px = 0.05m), so 1px² = 0.0025m²
+  return area * 0.0025;
+}
+
+function pointInPolygon(pt, polygon){
+  let inside = false;
+  for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+    const xi=polygon[i].x,yi=polygon[i].y,xj=polygon[j].x,yj=polygon[j].y;
+    if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ── Room list UI ──────────────────────────────────────────────────────────────
+function renderRoomList(){
+  const container = document.getElementById('room-items');
+  container.innerHTML = rooms.map((r,i) => `
+    <div class="room-item ${r===selectedRoom?'selected':''}" onclick="selectRoom(${i})">
+      <div class="room-color" style="background:${r.color}"></div>
+      <div class="room-info">
+        <input class="room-name-input" value="${r.name}" onclick="event.stopPropagation()"
+               onchange="rooms[${i}].name=this.value;draw();update3DPreview()">
+        <div class="room-area">${calcArea(r.points).toFixed(1)} m²</div>
+      </div>
+      <button class="room-del" onclick="deleteRoom(${i});event.stopPropagation()">✕</button>
+    </div>`).join('');
+}
+
+function selectRoom(i){
+  selectedRoom = rooms[i];
+  renderRoomList();
+  draw();
+}
+
+function deleteRoom(i){
+  if(rooms[i]===selectedRoom) selectedRoom=null;
+  rooms.splice(i,1);
+  renderRoomList();
+  update3DPreview();
+  draw();
+}
+
+// ── Tools ─────────────────────────────────────────────────────────────────────
+function setTool(t){
+  tool = t;
+  currentPoints = [];
+  document.querySelectorAll('[id^="tb-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tb-'+t)?.classList.add('active');
+  document.getElementById('canvas-area').classList.toggle('pan-mode', t==='pan');
+  const hints = {draw:'Kliknite pre bod — Enter/dvojklik pre uzavretie', select:'Kliknite na miestnosť pre výber', pan:'Ťahajte pre posúvanie — scroll pre zoom'};
+  document.getElementById('instructions').textContent = hints[t]||'';
+  draw();
+}
+window.setTool=setTool;
+
+function zoomIn(){ viewScale=Math.min(10,viewScale*1.2); draw(); }
+function zoomOut(){ viewScale=Math.max(0.1,viewScale/1.2); draw(); }
+function resetView(){ viewX=tc.width/2; viewY=tc.height/2; viewScale=1; draw(); }
+function undoLast(){
+  if(currentPoints.length>0){ currentPoints.pop(); draw(); }
+  else if(rooms.length>0){ rooms.pop(); renderRoomList(); update3DPreview(); draw(); }
+}
+window.zoomIn=zoomIn; window.zoomOut=zoomOut; window.resetView=resetView; window.undoLast=undoLast;
+window.clearAll=()=>{ if(!confirm('Vymazať všetky miestnosti?'))return; rooms=[]; roomCounter=0; currentPoints=[]; selectedRoom=null; renderRoomList(); update3DPreview(); draw(); };
+
+// ── Floor plan background ─────────────────────────────────────────────────────
+function uploadFloorPlan(){ document.getElementById('floor-file-input').click(); }
+window.uploadFloorPlan=uploadFloorPlan;
+
+function onFloorFileSelected(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      bgImage = img;
+      // Fit image to canvas
+      const scaleX = tc.width * 0.8 / img.width;
+      const scaleY = tc.height * 0.8 / img.height;
+      viewScale = Math.min(scaleX, scaleY);
+      viewX = (tc.width - img.width*viewScale)/2;
+      viewY = (tc.height - img.height*viewScale)/2;
+      draw();
+
+      // Auto-detect after upload
+      autoDetectFromFile(file);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window.onFloorFileSelected=onFloorFileSelected;
+
+// ── Auto-detection ────────────────────────────────────────────────────────────
+async function autoDetect(){
+  if(!bgImage){ alert('Najprv nahrajte pôdorys pomocou tlačidla "Nahrať pôdorys"'); return; }
+  showAutoBar('Analyzujem pôdorys…');
+
+  // Send image to server for OpenCV analysis
+  try{
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = bgImage.width; canvas2.height = bgImage.height;
+    canvas2.getContext('2d').drawImage(bgImage, 0, 0);
+    const blob = await new Promise(r => canvas2.toBlob(r, 'image/png'));
+    const fd = new FormData();
+    fd.append('image', blob, 'floorplan.png');
+
+    const res = await fetch(API()+'/api/parse-floorplan', {method:'POST', body:fd});
+    if(!res.ok) throw new Error('Server error');
+    const data = await res.json();
+
+    hideAutoBar();
+    if(data.rooms && data.rooms.length > 0){
+      applyAutoRooms(data.rooms);
+    } else {
+      alert('Automatická detekcia nenašla miestnosti. Skúste nakresliť manuálne.');
+    }
+  }catch(e){
+    hideAutoBar();
+    console.error('Auto-detect error:', e);
+    alert('Auto-detekcia zlyhala: '+e.message+'\nSkúste nakresliť miestnosti manuálne.');
+  }
+}
+window.autoDetect=autoDetect;
+
+async function autoDetectFromFile(file){
+  showAutoBar('Automaticky deteکtujem miestnosti…');
+  try{
+    const fd = new FormData();
+    fd.append('image', file, file.name);
+    const res = await fetch(API()+'/api/parse-floorplan', {method:'POST', body:fd});
+    if(!res.ok) throw new Error();
+    const data = await res.json();
+    hideAutoBar();
+    if(data.rooms && data.rooms.length >= 2){
+      applyAutoRooms(data.rooms);
+      showMsg(`✓ Detekovaných ${data.rooms.length} miestností — skontrolujte a dolaďte`, 4000);
+    }
+  }catch(e){ hideAutoBar(); }
+}
+
+function applyAutoRooms(serverRooms){
+  // Convert server AR coords back to canvas coords
+  // Server: x,z in AR meters (scale 0.035), 20m real world
+  // Canvas: center is at viewX,viewY, 1px = 0.05m at scale 1
+  const SCALE = 20.0, AR = 0.035;
+  const canvasScale = 100 / AR / SCALE; // AR units to canvas units
+
+  rooms = serverRooms.map((r,i) => {
+    const cw = r.w * canvasScale;
+    const cd = r.d * canvasScale;
+    const cx = r.x * canvasScale;
+    const cz = r.z * canvasScale;
+    return {
+      ...newRoom([
+        {x:cx-cw/2, y:cz-cd/2},
+        {x:cx+cw/2, y:cz-cd/2},
+        {x:cx+cw/2, y:cz+cd/2},
+        {x:cx-cw/2, y:cz+cd/2},
+      ]),
+      name: r.name,
+      closed: true,
+    };
+  });
+  roomCounter = rooms.length;
+  renderRoomList();
+  update3DPreview();
+  draw();
+}
+
+function showAutoBar(msg){
+  document.getElementById('auto-msg').textContent = msg;
+  document.getElementById('auto-bar').style.display = 'flex';
+}
+function hideAutoBar(){ document.getElementById('auto-bar').style.display = 'none'; }
+function showMsg(msg, ms=3000){
+  const el=document.getElementById('instructions');
+  el.textContent=msg; el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0.6',ms);
+}
+
+// ── 3D Preview ────────────────────────────────────────────────────────────────
+const pcanvas = document.getElementById('preview-canvas');
+const prev = { renderer:null, scene:null, camera:null, group:null };
+
+function init3DPreview(){
+  const renderer = new THREE.WebGLRenderer({canvas:pcanvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x080a10);
+  renderer.shadowMap.enabled = true;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080a10);
+  scene.add(new THREE.AmbientLight(0xffffff,0.8));
+  const sun = new THREE.DirectionalLight(0xfff8ee,1);
+  sun.position.set(3,6,4); sun.castShadow=true; scene.add(sun);
+
+  const aspect = pcanvas.clientWidth/Math.max(1,pcanvas.clientHeight);
+  const camera = new THREE.PerspectiveCamera(55, aspect, 0.001, 100);
+  camera.position.set(1.5,1.2,1.5);
+  camera.lookAt(0,0,0);
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  prev.renderer=renderer; prev.scene=scene; prev.camera=camera; prev.group=group;
+
+  // Auto-rotate
+  let theta=Math.PI/4;
+  function animate(){
+    requestAnimationFrame(animate);
+    theta += 0.005;
+    const r=1.6;
+    camera.position.set(Math.sin(theta)*r, 1.1, Math.cos(theta)*r);
+    camera.lookAt(0,0.04,0);
+    const w=pcanvas.clientWidth, h=pcanvas.clientHeight;
+    if(pcanvas.width!==w||pcanvas.height!==h){
+      renderer.setSize(w,h,false);
+      camera.aspect=w/Math.max(1,h);
+      camera.updateProjectionMatrix();
+    }
+    renderer.render(scene,camera);
+  }
+  animate();
+}
+
+const FLOORS_3D=[0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
+const WALLS_3D=[0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+
+function update3DPreview(){
+  if(!prev.group) return;
+  while(prev.group.children.length) prev.group.remove(prev.group.children[0]);
+
+  const CANVAS_TO_AR = 0.035/(20); // 1 canvas unit → AR units
+  const WH=0.09, WT=0.006, FT=0.004;
+
+  rooms.forEach((room,i)=>{
+    if(!room.closed||room.points.length<3) return;
+    const ci=i%5;
+
+    // Bounding box of room points → floor & walls
+    const xs=room.points.map(p=>p.x), ys=room.points.map(p=>p.y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs);
+    const minY=Math.min(...ys),maxY=Math.max(...ys);
+    const cx=(minX+maxX)/2*CANVAS_TO_AR, cz=(minY+maxY)/2*CANVAS_TO_AR;
+    const rw=(maxX-minX)*CANVAS_TO_AR, rd=(maxY-minY)*CANVAS_TO_AR;
+
+    const fm=new THREE.MeshLambertMaterial({color:FLOORS_3D[ci]});
+    const wm=new THREE.MeshLambertMaterial({color:WALLS_3D[ci]});
+
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(rw,FT,rd),fm);
+    floor.position.set(cx,0,cz); prev.group.add(floor);
+
+    [[rw,WH,WT,cx,WH/2,cz-rd/2],[rw,WH,WT,cx,WH/2,cz+rd/2],
+     [WT,WH,rd,cx-rw/2,WH/2,cz],[WT,WH,rd,cx+rw/2,WH/2,cz]
+    ].forEach(([w,h,d,x,y,z])=>{
+      const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wm);
+      wall.position.set(x,y,z); wall.castShadow=true; prev.group.add(wall);
+    });
+  });
+}
+
+// ── Convert rooms to AR format for saving ─────────────────────────────────────
+function roomsToAR(){
+  const CANVAS_TO_M = 0.05; // 1px = 0.05m
+  const AR = 0.035/1; // AR scale factor
+  return rooms.filter(r=>r.closed&&r.points.length>=3).map(r=>{
+    const xs=r.points.map(p=>p.x), ys=r.points.map(p=>p.y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs);
+    const minY=Math.min(...ys),maxY=Math.max(...ys);
+    const w=(maxX-minX)*CANVAS_TO_M*AR;
+    const d=(maxY-minY)*CANVAS_TO_M*AR;
+    const cx=(minX+maxX)/2*CANVAS_TO_M*AR;
+    const cz=(minY+maxY)/2*CANVAS_TO_M*AR;
+    return {
+      name:r.name, label:r.name.slice(0,2),
+      x:+cx.toFixed(4), z:+cz.toFixed(4),
+      w:+w.toFixed(4),  d:+d.toFixed(4),
+      area:+calcArea(r.points).toFixed(1)
+    };
+  });
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function saveProperty(){
+  const name = document.getElementById('prop-name-input').value.trim();
+  if(!name){ alert('Zadajte názov nehnuteľnosti'); return; }
+
+  const arRooms = roomsToAR();
+  if(arRooms.length===0){ alert('Nakreslite aspoň jednu miestnosť'); return; }
+
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true; btn.textContent='Ukladám…';
+
+  try{
+    const payload={
+      name,
+      area: document.getElementById('meta-area').value,
+      price: document.getElementById('meta-price').value,
+      rooms: arRooms,
+      source: 'trace',
+    };
+
+    const url = propId
+      ? API()+'/api/properties/'+propId
+      : API()+'/api/properties';
+    const method = propId ? 'PUT' : 'POST';
+
+    // For new property, send as JSON with rooms pre-computed
+    const res = await fetch(url, {
+      method,
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+
+    btn.textContent='✓ Uložené!';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Uložiť & QR kód';},2000);
+
+    // Show QR
+    if(data.qrCode){
+      showQRModal(data.qrCode, data.viewerUrl, data.id);
+    }
+  }catch(e){
+    console.error('Save error:',e);
+    alert('Chyba pri ukladaní: '+e.message);
+    btn.disabled=false; btn.textContent='💾 Uložiť & QR kód';
+  }
+}
+window.saveProperty=saveProperty;
+
+function showQRModal(qrCode, url, id){
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  div.innerHTML=`
+    <div style="background:#13161e;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center">
+      <div style="font-size:18px;font-weight:500;margin-bottom:8px;color:#e8eaf0">QR kód pripravený!</div>
+      <div style="font-size:12px;color:#8b90a0;margin-bottom:16px">${url}</div>
+      <div style="background:#fff;padding:12px;border-radius:10px;display:inline-block;margin-bottom:16px">
+        <img src="${qrCode}" style="width:200px;height:200px;display:block">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:14px">
+        <a href="${qrCode}" download="qr-${id}.png" style="background:#2ecc9a;color:#000;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;text-decoration:none">⬇ Stiahnuť PNG</a>
+        <a href="/view/${id}" target="_blank" style="background:transparent;color:#2ecc9a;border:1px solid rgba(46,204,154,.4);border-radius:8px;padding:9px 18px;font-size:13px;text-decoration:none">↗ Otvoriť AR</a>
+      </div>
+      <button onclick="this.closest('[style]').remove()" style="background:transparent;border:1px solid rgba(255,255,255,.14);color:#8b90a0;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;font-family:inherit">Zavrieť</button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+// ── Load existing property ─────────────────────────────────────────────────────
+async function loadProperty(){
+  if(!propId) return;
+  try{
+    const res=await fetch(API()+'/api/properties/'+propId);
+    if(!res.ok) return;
+    const p=await res.json();
+    document.getElementById('prop-name-input').value=p.name||'';
+    document.getElementById('meta-area').value=p.area||'';
+    document.getElementById('meta-price').value=p.price||'';
+  }catch(e){}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+resizeCanvas();
+init3DPreview();
+resetView();
+loadProperty();
+setTool('draw');
+</script>
+</body>
+</html>
