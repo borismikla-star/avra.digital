@@ -1,7 +1,7 @@
 {
   "name": "avra-digital",
   "version": "1.0.0",
-  "description": "AVRA — Agent for AR/VR in Realty",
+  "description": "AVRA \u2014 Agent for AR/VR in Realty",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -14,7 +14,9 @@
     "lowdb": "^1.0.0",
     "qrcode": "^1.5.3",
     "cors": "^2.8.5",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "sharp": "^0.33.2",
+    "jimp": "^0.22.10"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

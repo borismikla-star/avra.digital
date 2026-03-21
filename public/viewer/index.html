@@ -481,28 +481,44 @@ async function startViewer() {
     camera.position.set(0, 0.5, 1.2); camera.lookAt(0,0,0);
     hitMat = new THREE.Matrix4().makeTranslation(0,-0.15,-0.4).toArray();
 
-    // Tap anywhere on screen to place model
-    document.getElementById('hint').textContent = '📱 Klepnite na miesto kde chcete umiestniť model';
+    document.getElementById('hint').textContent = '📱 Namieste terč na podlahu a klepnite Zakotviť';
     document.getElementById('hint').style.display = 'block';
+    document.getElementById('place-btn').style.display = 'block';
     document.getElementById('reticle-hint').style.display = 'block';
 
-    // Place on tap
-    canvas.addEventListener('click', (e) => {
-      if (placed) return;
-      // Calculate distance from camera — place model 0.5m in front
-      const dist = 0.5;
-      const vec = new THREE.Vector3(
-        (e.clientX/innerWidth)*2-1,
-        -(e.clientY/innerHeight)*2+1,
-        0.5
-      ).unproject(camera).sub(camera.position).normalize();
-      const pos = camera.position.clone().add(vec.multiplyScalar(dist));
-      pos.y = Math.min(pos.y, camera.position.y - 0.1); // keep below eye level
-      hitMat = new THREE.Matrix4().makeTranslation(pos.x, pos.y, pos.z).toArray();
-      place();
-    }, { once: true });
+    // Floating reticle — model preview follows center of screen
+    // Place is always 0.6m in front of camera, on the floor plane
+    function getCameraFloorPoint() {
+      // Cast ray from camera center downward-forward to find floor
+      const dir = new THREE.Vector3(0, -0.3, -1).normalize();
+      dir.applyQuaternion(camera.quaternion);
+      const origin = camera.position.clone();
+      // Simple: place at fixed distance on floor level
+      const t = (origin.y - 0) / Math.max(0.01, -dir.y); // intersect y=0
+      const floorPt = origin.clone().add(dir.clone().multiplyScalar(Math.min(t, 1.5)));
+      floorPt.y = 0;
+      return floorPt;
+    }
 
-    renderer.setAnimationLoop(()=>renderer.render(scene,camera));
+    // Animate reticle position
+    const reticleMesh = new THREE.Mesh(
+      new THREE.RingGeometry(0.04, 0.06, 32),
+      new THREE.MeshBasicMaterial({ color: 0x2ecc9a, side: THREE.DoubleSide })
+    );
+    reticleMesh.rotation.x = -Math.PI / 2;
+    scene.add(reticleMesh);
+
+    // Update hitMat continuously from floor point
+    renderer.setAnimationLoop(() => {
+      if (!placed) {
+        const fp = getCameraFloorPoint();
+        reticleMesh.position.copy(fp);
+        hitMat = new THREE.Matrix4().makeTranslation(fp.x, fp.y, fp.z).toArray();
+      } else {
+        reticleMesh.visible = false;
+      }
+      renderer.render(scene, camera);
+    });
   } catch {
     launch3D();
   }
