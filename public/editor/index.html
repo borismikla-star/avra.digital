@@ -171,7 +171,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 const API = () => localStorage.getItem('avra_api') || location.origin;
-const propId = new URLSearchParams(location.search).get('id');
+// ID from pathname: /editor/:id
+function getIdFromPath(){
+  const parts=location.pathname.split('/').filter(Boolean);
+  return parts.length>=2&&parts[0]==='editor'?parts[1]:null;
+}
+const propId = getIdFromPath();
 
 let tool = 'draw';
 let rooms = []; // {id, name, points:[{x,y}], closed, color}
@@ -833,7 +838,7 @@ async function saveProperty(){
       data = await res.json();
       savedId = data.id;
       // Update URL so next save is a PUT
-      if(savedId) history.replaceState(null,'','/editor/'+savedId);
+      if(savedId){ history.replaceState(null,'','/editor/'+savedId); }
     }
 
     console.log('Saved:', data);

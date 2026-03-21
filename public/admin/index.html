@@ -286,7 +286,7 @@ tr:hover td{background:var(--bg3)}
 <div id="toast"></div>
 
 <script>
-const API = () => localStorage.getItem('avra_api') || (location.origin === 'null' ? 'http://localhost:3000' : location.origin);
+const API = () => (localStorage.getItem('avra_api') || location.origin).replace(/\/$/,'');
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function nav(page) {

@@ -4,227 +4,206 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AVRA — AR Prehliadka</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#080a10;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;height:100vh;overflow:hidden;color:#fff;touch-action:none}
 
-#splash{position:fixed;inset:0;background:#080a10;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
-.sp-mark{width:64px;height:64px;background:#2ecc9a;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000}
-.sp-title{font-size:22px;font-weight:500}
-.sp-meta{font-size:14px;color:rgba(255,255,255,.45);max-width:260px;line-height:1.6}
-.sp-btn{background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:16px 44px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;width:100%;max-width:280px;animation:glow 2s ease-out infinite}
-@keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 18px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
-.sp-skip{font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;text-decoration:underline}
-.sp-status{font-size:12px;color:rgba(255,255,255,.3)}
+/* States: splash | error | viewer */
+#splash,#error-screen,#app{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
+#splash{background:#080a10;z-index:100}
+#error-screen{background:#080a10;z-index:100}
+#app{display:none;z-index:1}
 
-#app{position:fixed;inset:0;display:none;flex-direction:column}
+.mark{width:64px;height:64px;background:#2ecc9a;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000}
+.mark-err{background:#e05555}
+h1{font-size:21px;font-weight:500}
+.sub{font-size:13px;color:rgba(255,255,255,.45);max-width:280px;line-height:1.7}
+.btn-primary{background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 40px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;animation:glow 2s ease-out infinite}
+.btn-ghost{background:transparent;color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:11px 28px;font-size:13px;font-family:inherit;cursor:pointer}
+@keyframes glow{0%{box-shadow:0 0 0 0 rgba(46,204,154,.5)}70%{box-shadow:0 0 0 18px rgba(46,204,154,0)}100%{box-shadow:0 0 0 0 rgba(46,204,154,0)}}
+
+/* Viewer internals */
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
-
 #hud{position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);padding:14px 16px 40px;pointer-events:none}
 .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,154,.15);border:1px solid rgba(46,204,154,.3);color:#2ecc9a;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:6px}
 .bdot{width:5px;height:5px;background:#2ecc9a;border-radius:50%;animation:blink 2s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-#pname{font-size:19px;font-weight:500}
+#pname{font-size:18px;font-weight:500}
 #pmeta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+#mode-type{font-size:10px;color:rgba(255,255,255,.25);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
 
-#mode-bar{position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px}
-.mode-btn{background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:99px;padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer}
-.mode-btn.active{background:rgba(46,204,154,.2);border-color:rgba(46,204,154,.5);color:#2ecc9a}
+#mode-bar{position:absolute;top:14px;right:14px;z-index:10;display:flex;gap:6px}
+.mb{background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);border-radius:99px;padding:6px 13px;font-size:12px;font-family:inherit;cursor:pointer}
+.mb.active{background:rgba(46,204,154,.2);border-color:rgba(46,204,154,.5);color:#2ecc9a}
 
-#hint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none;text-align:center}
+#hint{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:10px 20px;font-size:13px;white-space:nowrap;display:none}
 #place-btn{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 36px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;animation:glow 2s ease-out infinite}
 
 #ctrl{position:absolute;bottom:28px;right:12px;z-index:10;display:none;flex-direction:column;gap:8px}
 .cb{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none}
+.cb-anchor{color:#2ecc9a;border-color:rgba(46,204,154,.4);font-size:14px}
 
 #tip{position:absolute;left:12px;right:60px;bottom:28px;z-index:20;display:none;background:rgba(8,10,16,.92);backdrop-filter:blur(12px);border:1px solid rgba(46,204,154,.3);border-radius:14px;padding:16px}
-.tip-name{font-size:17px;font-weight:500;color:#2ecc9a;margin-bottom:3px}
-.tip-area{font-size:13px;color:rgba(255,255,255,.5)}
-.tip-close{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);margin-top:8px}
+.tn{font-size:17px;font-weight:500;color:#2ecc9a;margin-bottom:3px}
+.ta{font-size:13px;color:rgba(255,255,255,.5)}
+.tc{font-size:11px;color:rgba(255,255,255,.25);text-align:center;cursor:pointer;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);margin-top:8px}
 
 #mm{position:absolute;top:80px;right:12px;z-index:10;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;display:none}
 #mmc{width:100px;display:block}
 #mmlbl{font-size:9px;color:rgba(255,255,255,.35);text-align:center;padding:3px 0}
-
-/* AR button (model-viewer style) */
-#ar-launch{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:10;background:#2ecc9a;color:#000;border:none;border-radius:99px;padding:14px 28px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:none;align-items:center;gap:8px}
 </style>
 </head>
 <body>
 
-<div id="splash">
-  <div class="sp-mark">A</div>
-  <div class="sp-title" id="sp-title">AVRA Digital</div>
-  <div class="sp-meta" id="sp-meta">Načítavam…</div>
-  <button class="sp-btn" id="sp-btn" onclick="startViewer()" style="display:none">Otvoriť AR prehliadku</button>
-  <div class="sp-skip" id="sp-skip" onclick="launch3D()" style="display:none">Zobraziť len 3D model</div>
-  <div class="sp-status" id="sp-status">Načítavam model…</div>
+<!-- State 1: Loading / Splash -->
+<div id="splash" style="display:flex">
+  <div class="mark">A</div>
+  <h1 id="sp-title">AVRA Digital</h1>
+  <div class="sub" id="sp-sub">Načítavam…</div>
+  <button class="btn-primary" id="sp-btn" onclick="startViewer()" style="display:none">Otvoriť prehliadku</button>
+  <button class="btn-ghost" id="sp-3d" onclick="launch3D()" style="display:none">Zobraziť 3D model</button>
+  <div style="font-size:11px;color:rgba(255,255,255,.2)" id="sp-type"></div>
 </div>
 
+<!-- State 2: Error -->
+<div id="error-screen">
+  <div class="mark mark-err">!</div>
+  <h1 id="err-title">Chyba načítania</h1>
+  <div class="sub" id="err-msg">Nehnuteľnosť sa nepodarilo načítať.</div>
+  <button class="btn-ghost" onclick="history.back()">← Späť</button>
+</div>
+
+<!-- State 3: Viewer -->
 <div id="app">
   <video id="vid" autoplay playsinline muted webkit-playsinline></video>
   <canvas id="c"></canvas>
-
   <div id="hud">
     <div class="badge"><div class="bdot"></div>AVRA AR</div>
     <div id="pname"></div>
     <div id="pmeta"></div>
+    <div id="mode-type"></div>
   </div>
-
   <div id="mode-bar">
-    <button class="mode-btn active" id="mb-3d" onclick="setMode('3d')">3D</button>
-    <button class="mode-btn" id="mb-cam" onclick="setMode('cam')">AR kamera</button>
+    <button class="mb active" id="mb-3d" onclick="setMode('3d')">3D</button>
+    <button class="mb" id="mb-cam" onclick="setMode('cam')">AR</button>
   </div>
-
   <div id="hint">📱 Namierte kameru na podlahu a klepnite</div>
-  <button id="place-btn" onclick="place()">Zakotviť model</button>
-
+  <button id="place-btn" onclick="placeModel()">Zakotviť model</button>
   <div id="ctrl">
     <div class="cb" onclick="scUp()">+</div>
     <div class="cb" onclick="scDn()">−</div>
     <div class="cb" onclick="rotL()">↺</div>
     <div class="cb" onclick="rotR()">↻</div>
-    <div class="cb" onclick="reanchor()" style="font-size:13px;color:#2ecc9a">⚓</div>
+    <div class="cb cb-anchor" onclick="reanchor()">⚓</div>
   </div>
-
   <div id="tip">
-    <div class="tip-name" id="tip-name"></div>
-    <div class="tip-area" id="tip-area"></div>
-    <div class="tip-close" onclick="document.getElementById('tip').style.display='none'">✕ zavrieť</div>
+    <div class="tn" id="tip-name"></div>
+    <div class="ta" id="tip-area"></div>
+    <div class="tc" onclick="document.getElementById('tip').style.display='none'">✕ zavrieť</div>
   </div>
-
   <div id="mm"><canvas id="mmc"></canvas><div id="mmlbl"></div></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const propId = new URLSearchParams(location.search).get('id');
-let rooms = [], property = null;
-let placed = false, modelSc = 1, hitMat = null;
+// ── ID extraction — ALWAYS from pathname, never query string ──────────────────
+// URL pattern: /view/:id  e.g. /view/abc-123
+function getIdFromPath(){
+  const parts = location.pathname.split('/').filter(Boolean);
+  // parts[0]='view', parts[1]=id
+  return parts.length>=2 ? parts[1] : null;
+}
+const propId = getIdFromPath();
+
+// ── App state ─────────────────────────────────────────────────────────────────
+// STATE: 'loading' | 'error' | 'demo' | 'loaded'
+let STATE = 'loading';
+let property = null;
+let rooms = [];
+let placed = false;
+let modelSc = 1;
 let currentMode = '3d';
-
-// ── Defaults ──────────────────────────────────────────────────────────────────
-function defaultRooms(){
-  return [
-    {name:'Obývacia izba',label:'R1',x:-0.105,z:-0.07, w:0.245,d:0.21, area:28},
-    {name:'Kuchyňa',      label:'R2',x:0.1575,z:-0.07, w:0.14, d:0.21, area:14},
-    {name:'Spálňa',       label:'R3',x:-0.105,z:0.1925,w:0.21, d:0.175,area:16},
-    {name:'Detská izba',  label:'R4',x:0.14,  z:0.1925,w:0.175,d:0.175,area:12},
-    {name:'Kúpeľňa',      label:'R5',x:0.07,  z:0.105, w:0.105,d:0.105,area:7 },
-  ];
-}
-
-// ── Load property ─────────────────────────────────────────────────────────────
-async function loadProperty(){
-  // Show buttons immediately
-  document.getElementById('sp-btn').style.display = 'block';
-  document.getElementById('sp-skip').style.display = 'block';
-
-  if(!propId){ setDemo(); return; }
-  try{
-    const res = await fetch('/api/properties/'+propId);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    property = await res.json();
-    rooms = (property.rooms && property.rooms.length >= 2) ? property.rooms : defaultRooms();
-    const meta = [property.area?property.area+' m²':'', property.price||''].filter(Boolean).join(' · ');
-    document.getElementById('sp-title').textContent = property.name || 'AR Prehliadka';
-    document.getElementById('sp-meta').textContent  = meta || '3D model nehnuteľnosti';
-    document.getElementById('pname').textContent = property.name || '';
-    document.getElementById('pmeta').textContent = meta;
-    document.getElementById('sp-status').textContent = rooms.length + ' miestností ✓';
-  }catch(e){
-    console.warn('Property load error:', e.message);
-    setDemo();
-  }
-}
-
-function setDemo(){
-  rooms = defaultRooms();
-  document.getElementById('sp-title').textContent = 'AVRA Demo';
-  document.getElementById('sp-meta').textContent  = 'Vzorová AR prehliadka';
-  document.getElementById('pname').textContent = 'AVRA Demo';
-  document.getElementById('sp-status').textContent = 'Demo · 5 miestností';
-}
+let cameraStream = null;
+let hitPos = null; // world position for placement
 
 // ── Three.js ──────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0, 0);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0,0);
 renderer.shadowMap.enabled = true;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(65, 1, 0.001, 200);
+const camera = new THREE.PerspectiveCamera(65,1,0.001,200);
 
 function resize(){
-  renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth/innerHeight;
+  renderer.setSize(innerWidth,innerHeight,false);
+  camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
 }
-resize(); addEventListener('resize', resize);
+resize(); addEventListener('resize',resize);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-const sun = new THREE.DirectionalLight(0xfff8ee, 1.1);
+scene.add(new THREE.AmbientLight(0xffffff,0.9));
+const sun=new THREE.DirectionalLight(0xfff8ee,1.1);
 sun.position.set(2,5,3); sun.castShadow=true; scene.add(sun);
-const fill = new THREE.DirectionalLight(0xc8e0ff, 0.35);
+const fill=new THREE.DirectionalLight(0xc8e0ff,0.35);
 fill.position.set(-2,3,-2); scene.add(fill);
 
-const modelGroup = new THREE.Group();
-modelGroup.visible = false;
+// Shadow plane
+const shadowPlane=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.ShadowMaterial({opacity:0.2}));
+shadowPlane.rotation.x=-Math.PI/2; shadowPlane.position.y=-0.001; shadowPlane.receiveShadow=true;
+scene.add(shadowPlane);
+
+const modelGroup=new THREE.Group();
+modelGroup.visible=false;
 scene.add(modelGroup);
 
-// Orbit state
-const orbit = {
-  theta: Math.PI/4, phi: Math.PI/3, radius: 0.9,
-  target: new THREE.Vector3(),
-  minPhi:0.05, maxPhi:Math.PI/2-0.05,
-  minR:0.15, maxR:3.5
-};
+// Orbit
+const orbit={theta:Math.PI/4,phi:Math.PI/3,radius:0.9,target:new THREE.Vector3(),minPhi:0.05,maxPhi:Math.PI/2-0.05,minR:0.1,maxR:4};
 function orbitUpdate(){
   camera.position.set(
-    orbit.target.x + orbit.radius*Math.sin(orbit.phi)*Math.sin(orbit.theta),
-    orbit.target.y + orbit.radius*Math.cos(orbit.phi),
-    orbit.target.z + orbit.radius*Math.sin(orbit.phi)*Math.cos(orbit.theta)
+    orbit.target.x+orbit.radius*Math.sin(orbit.phi)*Math.sin(orbit.theta),
+    orbit.target.y+orbit.radius*Math.cos(orbit.phi),
+    orbit.target.z+orbit.radius*Math.sin(orbit.phi)*Math.cos(orbit.theta)
   );
   camera.lookAt(orbit.target);
 }
 
-// Colors
-const FLOORS  = [0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
-const WALLS   = [0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
-const ACCENTS = [0x5b9bd5,0x4caf7d,0xe0a835,0xa07dd0,0x2ecc9a];
-const hitMeshes = [];
+// ── Model colors ──────────────────────────────────────────────────────────────
+const FLOORS=[0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
+const WALLS =[0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+const ACCS  =[0x5b9bd5,0x4caf7d,0xe0a835,0xa07dd0,0x2ecc9a];
+const hitMeshes=[];
 
 function buildModel(){
   while(modelGroup.children.length) modelGroup.remove(modelGroup.children[0]);
-  hitMeshes.length = 0;
-  const H=0.09, T=0.006, FT=0.004;
+  hitMeshes.length=0;
+  const H=0.09,T=0.006,FT=0.004;
 
   rooms.forEach((r,i)=>{
-    const ci=i%5, {x,z,w,d}=r;
-    const fm=new THREE.MeshLambertMaterial({color:FLOORS[ci]});
-    const wm=new THREE.MeshLambertMaterial({color:WALLS[ci]});
-    const am=new THREE.MeshBasicMaterial({color:ACCENTS[ci]});
-
-    const floor=new THREE.Mesh(new THREE.BoxGeometry(w,FT,d),fm);
-    floor.position.set(x,0,z); floor.receiveShadow=true; modelGroup.add(floor);
-
+    const ci=i%5,{x,z,w,d}=r;
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(w,FT,d),new THREE.MeshLambertMaterial({color:FLOORS[ci]}));
+    fl.position.set(x,0,z); fl.receiveShadow=true; modelGroup.add(fl);
     [[w,H,T,x,H/2,z-d/2],[w,H,T,x,H/2,z+d/2],[T,H,d,x-w/2,H/2,z],[T,H,d,x+w/2,H/2,z]].forEach(([sw,sh,sd,px,py,pz])=>{
-      const wall=new THREE.Mesh(new THREE.BoxGeometry(sw,sh,sd),wm);
-      wall.position.set(px,py,pz); wall.castShadow=true; modelGroup.add(wall);
+      const wm=new THREE.Mesh(new THREE.BoxGeometry(sw,sh,sd),new THREE.MeshLambertMaterial({color:WALLS[ci]}));
+      wm.position.set(px,py,pz); wm.castShadow=true; modelGroup.add(wm);
     });
-
-    const acc=new THREE.Mesh(new THREE.BoxGeometry(w*.8,0.003,0.007),am);
-    acc.position.set(x,FT+0.001,z-d/2+T/2); modelGroup.add(acc);
-
+    const ac=new THREE.Mesh(new THREE.BoxGeometry(w*.8,0.003,0.007),new THREE.MeshBasicMaterial({color:ACCS[ci]}));
+    ac.position.set(x,FT+0.001,z-d/2+T/2); modelGroup.add(ac);
     const hit=new THREE.Mesh(new THREE.PlaneGeometry(w*.9,d*.9),new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide}));
     hit.rotation.x=-Math.PI/2; hit.position.set(x,0.006,z); hit.userData=r;
     modelGroup.add(hit); hitMeshes.push(hit);
   });
 
+  // Auto-fit orbit radius to model size
+  if(rooms.length){
+    const xs=rooms.map(r=>Math.abs(r.x)+r.w/2), zs=rooms.map(r=>Math.abs(r.z)+r.d/2);
+    const span=Math.max(...xs,...zs)*2;
+    orbit.radius=Math.max(0.5,span*2.2);
+    orbit.maxR=orbit.radius*4;
+  }
   buildMinimap();
 }
 
@@ -246,51 +225,128 @@ function buildMinimap(){
   document.getElementById('mmlbl').textContent=rooms.length+' miestností';
 }
 
-// ── Input handling ────────────────────────────────────────────────────────────
-let drag=false, lastX=0, lastY=0, lastDist=null, tapMoved=false;
+// ── Load property ─────────────────────────────────────────────────────────────
+async function loadProperty(){
+  if(!propId){
+    showError('Chýba ID modelu','Skontrolujte URL adresu. Formát: /view/ID-nehnutelnosti');
+    return;
+  }
 
+  try{
+    const res=await fetch('/api/properties/'+propId);
+
+    if(res.status===404){
+      showError('Model nenájdený',`Nehnuteľnosť s ID "${propId}" neexistuje v databáze.`);
+      return;
+    }
+    if(!res.ok){
+      showError('Chyba servera',`HTTP ${res.status} — skúste obnoviť stránku.`);
+      return;
+    }
+
+    property=await res.json();
+
+    if(!property.rooms||property.rooms.length===0){
+      showError('Model bez dát','Nehnuteľnosť nemá uložené miestnosti. Otvorte editor a nakreslite pôdorys.');
+      return;
+    }
+
+    rooms=property.rooms;
+    STATE='loaded';
+
+    // Update HUD
+    document.getElementById('sp-title').textContent=property.name;
+    document.getElementById('pname').textContent=property.name;
+    const meta=[property.area?property.area+' m²':'',property.price||''].filter(Boolean).join(' · ');
+    document.getElementById('sp-sub').textContent=meta||rooms.length+' miestností';
+    document.getElementById('pmeta').textContent=meta;
+    document.getElementById('mode-type').textContent=`Model: ${property.model_type||'—'} · ${rooms.length} miestností`;
+    document.getElementById('sp-type').textContent=`ID: ${propId} · typ: ${property.model_type}`;
+
+    document.getElementById('sp-btn').style.display='block';
+    document.getElementById('sp-3d').style.display='block';
+
+  }catch(e){
+    console.error('loadProperty error:',e);
+    showError('Nepodarilo sa načítať model',e.message+'\nSkontrolujte pripojenie k internetu a skúste znova.');
+  }
+}
+
+function showError(title, msg){
+  STATE='error';
+  document.getElementById('splash').style.display='none';
+  document.getElementById('err-title').textContent=title;
+  document.getElementById('err-msg').textContent=msg;
+  document.getElementById('error-screen').style.display='flex';
+}
+
+function showSplash(){
+  document.getElementById('splash').style.display='flex';
+  document.getElementById('error-screen').style.display='none';
+  document.getElementById('app').style.display='none';
+}
+
+function showViewer(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('error-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('mm').style.display='block';
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+let drag=false,lx=0,ly=0,lastDist=null,tapMoved=false;
 function onTouchStart(e){
   if(!placed)return;
-  if(e.touches.length===1){drag=true;tapMoved=false;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}
+  if(e.touches.length===1){drag=true;tapMoved=false;lx=e.touches[0].clientX;ly=e.touches[0].clientY;}
   if(e.touches.length===2) lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
 }
 function onTouchMove(e){
   if(!placed)return; e.preventDefault();
   if(e.touches.length===1&&drag){
-    const dx=e.touches[0].clientX-lastX,dy=e.touches[0].clientY-lastY;
+    const dx=e.touches[0].clientX-lx,dy=e.touches[0].clientY-ly;
     if(Math.abs(dx)+Math.abs(dy)>3)tapMoved=true;
-    orbit.theta-=dx*0.008;
-    orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*0.008));
-    lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
-    orbitUpdate();
+    orbit.theta-=dx*.008; orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*.008));
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY; orbitUpdate();
   }
   if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    if(lastDist){orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+(lastDist-d)*0.003));orbitUpdate();}
+    if(lastDist){orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+(lastDist-d)*.003));orbitUpdate();}
     lastDist=d;
   }
 }
 function onTouchEnd(e){
-  drag=false; lastDist=null;
-  if(!tapMoved&&e.changedTouches.length===1&&placed)tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+  drag=false;lastDist=null;
+  if(!tapMoved&&e.changedTouches.length===1){
+    if(!placed&&currentMode==='cam'){
+      // First tap in camera mode → place model
+      placeAtCenter();
+    } else if(placed){
+      tap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+    }
+  }
 }
 
 let mdown=false;
-canvas.addEventListener('mousedown',e=>{if(!placed)return;mdown=true;tapMoved=false;lastX=e.clientX;lastY=e.clientY;});
+canvas.addEventListener('mousedown',e=>{if(!placed)return;mdown=true;tapMoved=false;lx=e.clientX;ly=e.clientY;});
 canvas.addEventListener('mousemove',e=>{
   if(!mdown||!placed)return;
-  const dx=e.clientX-lastX,dy=e.clientY-lastY;
+  const dx=e.clientX-lx,dy=e.clientY-ly;
   if(Math.abs(dx)+Math.abs(dy)>3)tapMoved=true;
-  orbit.theta-=dx*0.006; orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*0.006));
-  lastX=e.clientX;lastY=e.clientY; orbitUpdate();
+  orbit.theta-=dx*.006; orbit.phi=Math.max(orbit.minPhi,Math.min(orbit.maxPhi,orbit.phi-dy*.006));
+  lx=e.clientX;ly=e.clientY; orbitUpdate();
 });
 canvas.addEventListener('mouseup',e=>{if(!tapMoved&&placed)tap(e.clientX,e.clientY);mdown=false;});
-canvas.addEventListener('wheel',e=>{if(!placed)return;orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+e.deltaY*0.001));orbitUpdate();},{passive:true});
+canvas.addEventListener('wheel',e=>{if(!placed)return;orbit.radius=Math.max(orbit.minR,Math.min(orbit.maxR,orbit.radius+e.deltaY*.001));orbitUpdate();},{passive:true});
 canvas.addEventListener('touchstart',onTouchStart,{passive:false});
 canvas.addEventListener('touchmove',onTouchMove,{passive:false});
 canvas.addEventListener('touchend',onTouchEnd,{passive:false});
 
-// Tap rooms
+// Camera mode: tap canvas to place
+canvas.addEventListener('click',e=>{
+  if(currentMode==='cam'&&!placed) placeAtCenter();
+});
+
+// Tap room detection
 const ray=new THREE.Raycaster(),pt=new THREE.Vector2();
 function tap(cx,cy){
   pt.x=(cx/innerWidth)*2-1; pt.y=-(cy/innerHeight)*2+1;
@@ -306,68 +362,37 @@ function tap(cx,cy){
   }
 }
 
-// ── Modes ─────────────────────────────────────────────────────────────────────
-function setMode(mode){
-  currentMode=mode;
-  document.getElementById('mb-3d').classList.toggle('active',mode==='3d');
-  document.getElementById('mb-cam').classList.toggle('active',mode==='cam');
-  if(mode==='3d'){
-    stopCamera();
-    launch3D();
-  } else {
-    startCamera();
-  }
-}
-window.setMode=setMode;
-
-let cameraStream=null;
-async function startCamera(){
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
-    cameraStream=stream;
-    const vid=document.getElementById('vid');
-    vid.srcObject=stream; vid.setAttribute('playsinline','');
-    await vid.play();
-    // Reset placement for camera mode
-    if(placed){
-      placed=false; modelGroup.visible=false;
-      document.getElementById('ctrl').style.display='none';
-    }
-    document.getElementById('hint').style.display='block';
-    document.getElementById('place-btn').style.display='block';
-    hitMat=new THREE.Matrix4().makeTranslation(0,-0.2,-0.5).toArray();
-    camera.position.set(0,0.5,1.2); camera.lookAt(0,0,0);
-  }catch(e){
-    console.warn('Camera error:',e.message);
-    setMode('3d');
-  }
+// ── Placement ─────────────────────────────────────────────────────────────────
+function placeAtCenter(){
+  // Place model 0.5–0.8m in front of camera on estimated floor plane
+  const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  const dist=0.6;
+  const pos=camera.position.clone().add(dir.multiplyScalar(dist));
+  pos.y=0; // snap to floor
+  doPlace(pos);
 }
 
-function stopCamera(){
-  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
-  document.getElementById('vid').srcObject=null;
-  document.getElementById('hint').style.display='none';
-  document.getElementById('place-btn').style.display='none';
-}
-
-function place(){
-  if(!hitMat)return;
-  const m=new THREE.Matrix4().fromArray(hitMat);
-  const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
-  m.decompose(p,q,s);
-  modelGroup.position.copy(p); modelGroup.quaternion.copy(q);
-  modelGroup.visible=true; placed=true;
-  orbit.target.copy(p).add(new THREE.Vector3(0,0.04,0));
+function doPlace(pos){
+  modelGroup.position.copy(pos);
+  modelGroup.quaternion.identity();
+  modelGroup.visible=true;
+  placed=true;
+  orbit.target.copy(pos).add(new THREE.Vector3(0,0.04,0));
   document.getElementById('hint').style.display='none';
   document.getElementById('place-btn').style.display='none';
   document.getElementById('ctrl').style.display='flex';
   orbitUpdate();
 }
-window.place=place;
+
+function placeModel(){
+  placeAtCenter();
+}
+window.placeModel=placeModel;
 
 function reanchor(){
   placed=false; modelGroup.visible=false;
   document.getElementById('ctrl').style.display='none';
+  document.getElementById('tip').style.display='none';
   if(currentMode==='cam'){
     document.getElementById('hint').style.display='block';
     document.getElementById('place-btn').style.display='block';
@@ -375,19 +400,69 @@ function reanchor(){
 }
 window.reanchor=reanchor;
 
-function launch3D(){
-  stopCamera();
-  modelGroup.position.set(0,0,0); modelGroup.quaternion.identity();
-  modelGroup.visible=true; placed=true;
-  orbit.target.set(0,0.04,0); orbit.radius=0.9;
-  orbit.theta=Math.PI/4; orbit.phi=Math.PI/3;
+// ── Modes ─────────────────────────────────────────────────────────────────────
+function setMode(mode){
+  currentMode=mode;
+  document.getElementById('mb-3d').classList.toggle('active',mode==='3d');
+  document.getElementById('mb-cam').classList.toggle('active',mode==='cam');
+
+  if(mode==='3d'){
+    stopCamera();
+    // Re-center model in 3D mode
+    modelGroup.position.set(0,0,0);
+    modelGroup.quaternion.identity();
+    modelGroup.visible=true;
+    placed=true;
+    orbit.target.set(0,0.04,0);
+    document.getElementById('hint').style.display='none';
+    document.getElementById('place-btn').style.display='none';
+    document.getElementById('ctrl').style.display='flex';
+    orbitUpdate();
+  }else{
+    startCamera();
+  }
+}
+window.setMode=setMode;
+
+async function startCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    cameraStream=stream;
+    const vid=document.getElementById('vid');
+    vid.srcObject=stream; vid.setAttribute('playsinline','');
+    await vid.play();
+
+    // Reset placement for fresh AR session
+    placed=false; modelGroup.visible=false;
+    document.getElementById('ctrl').style.display='none';
+    document.getElementById('hint').style.display='block';
+    document.getElementById('place-btn').style.display='block';
+
+    // Set initial camera position for camera passthrough
+    camera.position.set(0,1.6,0);
+    camera.lookAt(0,1.6,-1);
+  }catch(e){
+    console.warn('Camera error:',e.message);
+    // Graceful fallback — stay in 3D mode
+    setMode('3d');
+    // Show non-blocking notification
+    const n=document.createElement('div');
+    n.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(224,85,85,.9);color:#fff;border-radius:99px;padding:8px 18px;font-size:12px;z-index:50';
+    n.textContent='Kamera nedostupná — zobrazujem 3D režim';
+    document.body.appendChild(n);
+    setTimeout(()=>n.remove(),3500);
+  }
+}
+
+function stopCamera(){
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
+  const vid=document.getElementById('vid');
+  vid.srcObject=null;
   document.getElementById('hint').style.display='none';
   document.getElementById('place-btn').style.display='none';
-  document.getElementById('ctrl').style.display='flex';
-  orbitUpdate();
 }
-window.launch3D=launch3D;
 
+// ── Controls ──────────────────────────────────────────────────────────────────
 window.scUp=()=>{modelSc=Math.min(4,modelSc+0.2);modelGroup.scale.setScalar(modelSc);orbit.radius=Math.min(orbit.maxR,orbit.radius*1.1);orbitUpdate();};
 window.scDn=()=>{modelSc=Math.max(0.1,modelSc-0.2);modelGroup.scale.setScalar(modelSc);orbit.radius=Math.max(orbit.minR,orbit.radius*0.9);orbitUpdate();};
 window.rotL=()=>{orbit.theta+=Math.PI/8;orbitUpdate();};
@@ -395,19 +470,35 @@ window.rotR=()=>{orbit.theta-=Math.PI/8;orbitUpdate();};
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 function startViewer(){
-  document.getElementById('splash').style.display='none';
-  document.getElementById('app').style.display='flex';
-  document.getElementById('mm').style.display='block';
+  showViewer();
   launch3D();
 }
 window.startViewer=startViewer;
 
+function launch3D(){
+  showViewer();
+  modelGroup.position.set(0,0,0);
+  modelGroup.quaternion.identity();
+  modelGroup.visible=true;
+  placed=true;
+  orbit.target.set(0,0.04,0);
+  document.getElementById('ctrl').style.display='flex';
+  document.getElementById('hint').style.display='none';
+  document.getElementById('place-btn').style.display='none';
+  orbitUpdate();
+  setMode('3d');
+}
+window.launch3D=launch3D;
+
+// ── Render loop ───────────────────────────────────────────────────────────────
 renderer.setAnimationLoop(()=>renderer.render(scene,camera));
 
-// Boot
+// ── Boot ──────────────────────────────────────────────────────────────────────
+showSplash();
 loadProperty().then(()=>{
-  buildModel();
-  orbitUpdate();
+  if(STATE==='loaded'){
+    buildModel();
+  }
 });
 </script>
 </body>
