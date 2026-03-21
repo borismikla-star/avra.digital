@@ -189,7 +189,9 @@ resize(); addEventListener('resize', resize);
 scene.add(new THREE.AmbientLight(0xffffff, 0.85));
 const sun = new THREE.DirectionalLight(0xfff8ee, 1.1);
 sun.position.set(2,5,3); sun.castShadow=true; scene.add(sun);
-scene.add(Object.assign(new THREE.DirectionalLight(0xc8e0ff,0.35),{position:new THREE.Vector3(-2,3,-2)}));
+const fillLight = new THREE.DirectionalLight(0xc8e0ff, 0.35);
+fillLight.position.set(-2,3,-2);
+scene.add(fillLight);
 
 const modelGroup = new THREE.Group();
 modelGroup.visible = false;
