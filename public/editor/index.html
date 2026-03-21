@@ -793,33 +793,55 @@ async function saveProperty(){
   try{
     const payload={
       name,
-      area: document.getElementById('meta-area').value,
-      price: document.getElementById('meta-price').value,
-      rooms: arRooms,
+      area: document.getElementById('meta-area').value || '',
+      price: document.getElementById('meta-price').value || '',
+      rooms: JSON.stringify(arRooms),
       source: 'trace',
     };
 
-    const url = propId
-      ? API()+'/api/properties/'+propId
-      : API()+'/api/properties';
-    const method = propId ? 'PUT' : 'POST';
+    let savedId = propId;
+    let data;
 
-    // For new property, send as JSON with rooms pre-computed
-    const res = await fetch(url, {
-      method,
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
+    if(propId){
+      // Update existing — PUT with JSON
+      const res = await fetch(API()+'/api/properties/'+propId, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name, source:'trace',
+          area: payload.area,
+          price: payload.price,
+          rooms: arRooms,
+        })
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      data = await res.json();
+      data.id = propId;
+    } else {
+      // Create new — POST as FormData so multer can handle it
+      const fd = new FormData();
+      fd.append('name', name);
+      fd.append('area', payload.area);
+      fd.append('price', payload.price);
+      fd.append('rooms', payload.rooms);
+      fd.append('source', 'trace');
+      const res = await fetch(API()+'/api/properties', {
+        method: 'POST',
+        body: fd
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      data = await res.json();
+      savedId = data.id;
+      // Update URL so next save is a PUT
+      if(savedId) history.replaceState(null,'','/editor/'+savedId);
+    }
 
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-
+    console.log('Saved:', data);
     btn.textContent='✓ Uložené!';
-    setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Uložiť & QR kód';},2000);
+    setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Uložiť & QR kód';},2500);
 
-    // Show QR
     if(data.qrCode){
-      showQRModal(data.qrCode, data.viewerUrl, data.id);
+      showQRModal(data.qrCode, data.viewerUrl||('/view/'+(savedId||'')), savedId||'');
     }
   }catch(e){
     console.error('Save error:',e);
