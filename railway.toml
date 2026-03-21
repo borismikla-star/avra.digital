@@ -1,11 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && pip3 install pdfplumber Pillow numpy pdf2image || true"
+buildCommand = "npm install && (pip3 install opencv-python-headless Pillow numpy pdf2image || pip3 install Pillow numpy || true)"
 
 [deploy]
 startCommand = "node server/index.js"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
-
-[[services]]
-name = "avra-digital"
