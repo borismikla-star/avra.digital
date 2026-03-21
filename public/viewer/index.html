@@ -481,9 +481,27 @@ async function startViewer() {
     camera.position.set(0, 0.5, 1.2); camera.lookAt(0,0,0);
     hitMat = new THREE.Matrix4().makeTranslation(0,-0.15,-0.4).toArray();
 
+    // Tap anywhere on screen to place model
+    document.getElementById('hint').textContent = '📱 Klepnite na miesto kde chcete umiestniť model';
     document.getElementById('hint').style.display = 'block';
-    document.getElementById('place-btn').style.display = 'block';
     document.getElementById('reticle-hint').style.display = 'block';
+
+    // Place on tap
+    canvas.addEventListener('click', (e) => {
+      if (placed) return;
+      // Calculate distance from camera — place model 0.5m in front
+      const dist = 0.5;
+      const vec = new THREE.Vector3(
+        (e.clientX/innerWidth)*2-1,
+        -(e.clientY/innerHeight)*2+1,
+        0.5
+      ).unproject(camera).sub(camera.position).normalize();
+      const pos = camera.position.clone().add(vec.multiplyScalar(dist));
+      pos.y = Math.min(pos.y, camera.position.y - 0.1); // keep below eye level
+      hitMat = new THREE.Matrix4().makeTranslation(pos.x, pos.y, pos.z).toArray();
+      place();
+    }, { once: true });
+
     renderer.setAnimationLoop(()=>renderer.render(scene,camera));
   } catch {
     launch3D();

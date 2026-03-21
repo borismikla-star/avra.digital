@@ -2,12 +2,12 @@ const express  = require('express');
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
-const { execFile } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
 const QRCode   = require('qrcode');
 const cors     = require('cors');
 const low      = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
+const { parseFloorPlan } = require('./floorplan');
 
 const app      = express();
 const PORT     = process.env.PORT || 3000;
@@ -39,19 +39,6 @@ const upload = multer({
   }
 });
 
-function parsePDF(filePath) {
-  return new Promise(resolve => {
-    const script = path.join(__dirname, '../scripts/parse_floorplan.py');
-    const py = process.platform === 'win32' ? 'python' : 'python3';
-    execFile(py, [script, filePath], { timeout: 30000 }, (err, stdout) => {
-      try {
-        const r = JSON.parse(stdout.trim());
-        resolve(r.rooms?.length ? r : { rooms: defaultRooms(), source: 'demo' });
-      } catch { resolve({ rooms: defaultRooms(), source: 'demo' }); }
-    });
-  });
-}
-
 function defaultRooms() {
   return [
     { name:'Obývacia izba', label:'R1', x:-0.105, z:-0.07,  w:0.245, d:0.21,  area:28 },
@@ -62,6 +49,7 @@ function defaultRooms() {
   ];
 }
 
+// POST — create property
 app.post('/api/properties', upload.fields([
   { name: 'floor_plan', maxCount: 1 },
   { name: 'model_3d',   maxCount: 1 }
@@ -69,46 +57,99 @@ app.post('/api/properties', upload.fields([
   try {
     const { name, area, price, description } = req.body;
     if (!name) return res.status(400).json({ error: 'Názov je povinný' });
+
     const id = uuidv4();
     const viewerUrl = `${BASE_URL}/view/${id}`;
-    let rooms = defaultRooms(), modelType = 'demo', pdfPath = null, modelPath = null;
+    let rooms = defaultRooms(), modelType = 'demo';
+    let pdfPath = null, modelPath = null;
+
     if (req.files?.floor_plan?.[0]) {
       pdfPath = req.files.floor_plan[0].path;
-      const parsed = await parsePDF(pdfPath);
-      rooms = parsed.rooms; modelType = 'floor';
+      console.log('Parsing floor plan:', pdfPath);
+      try {
+        const parsed = await parseFloorPlan(pdfPath);
+        if (parsed && parsed.rooms && parsed.rooms.length >= 2) {
+          rooms = parsed.rooms;
+          modelType = 'floor';
+          console.log(`Parsed ${rooms.length} rooms from floor plan`);
+        } else {
+          console.log('Parser returned no rooms, using defaults');
+          modelType = 'floor';
+        }
+      } catch(e) {
+        console.log('Floor plan parse error:', e.message);
+        modelType = 'floor';
+      }
     }
-    if (req.files?.model_3d?.[0]) { modelPath = req.files.model_3d[0].path; modelType = 'gltf'; }
-    const qrCode = await QRCode.toDataURL(viewerUrl, { width: 300, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-    const property = { id, name, area: area||null, price: price||null, description: description||null, rooms, modelType, pdfPath, modelPath, viewerUrl, createdAt: Date.now() };
+
+    if (req.files?.model_3d?.[0]) {
+      modelPath = req.files.model_3d[0].path;
+      modelType = 'gltf';
+    }
+
+    const qrCode = await QRCode.toDataURL(viewerUrl, {
+      width: 300, margin: 2,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+
+    const property = {
+      id, name,
+      area:        area        || null,
+      price:       price       || null,
+      description: description || null,
+      rooms,
+      modelType,
+      pdfPath,
+      modelPath,
+      viewerUrl,
+      createdAt: Date.now()
+    };
+
     db.get('properties').push(property).write();
+    console.log('Saved property:', id, name, 'rooms:', rooms.length);
+
     res.json({ id, name, viewerUrl, qrCode, rooms: rooms.length, modelType, message: 'Nehnuteľnosť vytvorená' });
-  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('POST error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// GET — list
 app.get('/api/properties', (req, res) => {
-  const list = db.get('properties').map(p => ({ id:p.id, name:p.name, area:p.area, price:p.price, model_type:p.modelType, qr_url:p.viewerUrl, created_at:p.createdAt })).orderBy(['createdAt'],['desc']).value();
+  const list = db.get('properties')
+    .map(p => ({ id:p.id, name:p.name, area:p.area, price:p.price,
+                 model_type:p.modelType, qr_url:p.viewerUrl, created_at:p.createdAt }))
+    .orderBy(['createdAt'],['desc']).value();
   res.json(list);
 });
 
+// GET — single
 app.get('/api/properties/:id', (req, res) => {
   const p = db.get('properties').find({ id: req.params.id }).value();
   if (!p) return res.status(404).json({ error: 'Nenájdené' });
   res.json({ ...p, model_type: p.modelType });
 });
 
+// PUT — update
 app.put('/api/properties/:id', (req, res) => {
   const { name, area, price, description } = req.body;
   db.get('properties').find({ id: req.params.id }).assign({ name, area, price, description }).write();
   res.json({ message: 'Aktualizované' });
 });
 
+// DELETE
 app.delete('/api/properties/:id', (req, res) => {
   const p = db.get('properties').find({ id: req.params.id }).value();
-  if (p) { if (p.pdfPath && fs.existsSync(p.pdfPath)) fs.unlinkSync(p.pdfPath); if (p.modelPath && fs.existsSync(p.modelPath)) fs.unlinkSync(p.modelPath); }
+  if (p) {
+    if (p.pdfPath   && fs.existsSync(p.pdfPath))   fs.unlinkSync(p.pdfPath);
+    if (p.modelPath && fs.existsSync(p.modelPath)) fs.unlinkSync(p.modelPath);
+  }
   db.get('properties').remove({ id: req.params.id }).write();
   res.json({ message: 'Zmazané' });
 });
 
+// GET QR
 app.get('/api/properties/:id/qr', async (req, res) => {
   const p = db.get('properties').find({ id: req.params.id }).value();
   if (!p) return res.status(404).json({ error: 'Nenájdené' });
@@ -117,8 +158,14 @@ app.get('/api/properties/:id/qr', async (req, res) => {
   res.json({ qrCode, url });
 });
 
+// Viewer + Admin
 app.get('/view/:id', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'viewer/index.html')));
+app.get('/health', (req, res) => res.json({
+  status: 'ok', version: '1.1.0', product: 'AVRA Digital',
+  properties: db.get('properties').size().value()
+}));
 
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.0.0', product: 'AVRA Digital', properties: db.get('properties').size().value() }));
-
-app.listen(PORT, () => { console.log(`AVRA Digital running on port ${PORT}\nAdmin: ${BASE_URL}/admin`); });
+app.listen(PORT, () => {
+  console.log(`AVRA Digital v1.1 on port ${PORT}`);
+  console.log(`Admin: ${BASE_URL}/admin`);
+});
