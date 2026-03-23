@@ -49,14 +49,33 @@ function validateRooms(rooms){
 function runParser(imgPath){
   return new Promise(resolve=>{
     const script=path.join(__dirname,'../parser/parse.py');
-    execFile('python3',[script,imgPath],{timeout:30000},(err,stdout,stderr)=>{
-      if(err){console.error('Parser exec error:',err.message);resolve(null);return;}
-      try{
-        const r=JSON.parse(stdout.trim());
-        if(r.error){console.error('Parser returned error:',r.error);resolve(null);return;}
-        resolve(r.rooms?.length>=2?r:null);
-      }catch(e){console.error('Parser JSON parse error:',e.message,'\nstdout:',stdout.slice(0,200));resolve(null);}
-    });
+    // Try python3, python, /usr/bin/python3 in order
+    const pythons=['python3','python','/usr/bin/python3','/usr/local/bin/python3'];
+    let tried=0;
+    function tryNext(){
+      if(tried>=pythons.length){
+        console.error('Parser: no python found, tried:',pythons);
+        resolve(null); return;
+      }
+      const py=pythons[tried++];
+      execFile(py,[script,imgPath],{timeout:30000},(err,stdout,stderr)=>{
+        if(err&&(err.code==='ENOENT'||err.code==='EACCES')){
+          console.log(`Parser: ${py} not found, trying next...`);
+          tryNext(); return;
+        }
+        if(err){console.error('Parser exec error:',err.message);resolve(null);return;}
+        try{
+          const r=JSON.parse(stdout.trim());
+          if(r.error){console.error('Parser returned error:',r.error);resolve(null);return;}
+          console.log(`Parser success with ${py}: ${r.rooms?.length} rooms`);
+          resolve(r.rooms?.length>=2?r:null);
+        }catch(e){
+          console.error('Parser JSON error:',e.message,'stdout:',stdout.slice(0,100));
+          resolve(null);
+        }
+      });
+    }
+    tryNext();
   });
 }
 
@@ -240,4 +259,21 @@ app.get('/health',(req,res)=>res.json({
   routes:{admin:'/admin',editor:'/editor/:id',viewer:'/view/:id'}
 }));
 
-app.listen(PORT,()=>console.log(`\nAVRA Digital v3.1\n  ${BASE_URL}/admin\n  ${BASE_URL}/editor\n  ${BASE_URL}/health\n`));
+// Detect Python at startup
+const {execSync}=require('child_process');
+function detectPython(){
+  for(const py of ['python3','python','/usr/bin/python3','/usr/local/bin/python3']){
+    try{execSync(`${py} --version`,{stdio:'pipe'});return py;}catch{}
+  }
+  return null;
+}
+const PYTHON=detectPython();
+console.log('Python detected:',PYTHON||'NOT FOUND');
+
+app.listen(PORT,()=>console.log(`
+AVRA Digital v3.1
+  ${BASE_URL}/admin
+  ${BASE_URL}/editor
+  ${BASE_URL}/health
+  Python: ${PYTHON||'not found'}
+`));
