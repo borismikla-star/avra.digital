@@ -1,8 +1,15 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && (python3 -m pip install opencv-python-headless Pillow numpy --break-system-packages 2>/dev/null || python3 -m pip install Pillow numpy --break-system-packages 2>/dev/null || true) && python3 -c 'import PIL; print(\"Pillow OK\")' 2>/dev/null || true"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+
+[build.nixpacksPlan.phases.install]
+cmds = [
+  "npm install",
+  "python3.11 -m pip install opencv-python-headless Pillow numpy --break-system-packages || python3.11 -m pip install Pillow numpy --break-system-packages"
+]
 
 [deploy]
 startCommand = "node server/index.js"
 restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3

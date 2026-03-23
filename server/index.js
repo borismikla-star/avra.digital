@@ -33,7 +33,7 @@ const upload=multer({
 
 // ── Detect Python once at startup ─────────────────────────────────────────────
 let PYTHON=null;
-for(const py of ['python3','python','/usr/bin/python3','/usr/local/bin/python3','/usr/bin/python']){
+for(const py of ['python3.11','python3','python','/usr/bin/python3.11','/usr/bin/python3','/usr/local/bin/python3','/nix/var/nix/profiles/default/bin/python3']){
   try{execSync(`${py} -c "import sys;print(sys.version)"`,{stdio:'pipe'});PYTHON=py;break;}catch{}
 }
 console.log('Python:',PYTHON||'NOT FOUND — parser disabled');
