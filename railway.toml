@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && python3 -m pip install opencv-python-headless Pillow numpy --break-system-packages || python3 -m pip install Pillow numpy --break-system-packages || pip3 install Pillow numpy --break-system-packages || true"
+buildCommand = "npm install && (python3 -m pip install opencv-python-headless Pillow numpy --break-system-packages 2>/dev/null || python3 -m pip install Pillow numpy --break-system-packages 2>/dev/null || true) && python3 -c 'import PIL; print(\"Pillow OK\")' 2>/dev/null || true"
 
 [deploy]
 startCommand = "node server/index.js"

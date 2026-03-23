@@ -2,898 +2,681 @@
 <html lang="sk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>AVRA — Editor pôdorysu</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;
-  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
-  --accent:#2ecc9a;--text:#e8eaf0;--text2:#8b90a0;--text3:#454a5a;
-  --danger:#e05555;--warn:#e0a835;
-}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+:root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1c2030;--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.14);--a:#2ecc9a;--t:#e8eaf0;--t2:#8b90a0;--t3:#454a5a;--r:danger-color:#e05555}
+body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
 
-/* Top bar */
-#topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
-.logo{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:13px;flex-shrink:0}
-#prop-name-input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:6px 12px;font-family:inherit;font-size:14px;width:220px;outline:none}
-#prop-name-input:focus{border-color:var(--accent)}
-.sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
-.tool-btn{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;font-size:13px;transition:all .15s}
-.tool-btn:hover{background:var(--bg3);color:var(--text)}
-.tool-btn.active{background:rgba(46,204,154,.12);border-color:rgba(46,204,154,.4);color:var(--accent)}
-.tool-icon{font-size:15px}
-.spacer{flex:1}
-#save-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 18px;font-weight:600;font-family:inherit;font-size:13px;cursor:pointer}
+/* Topbar */
+#tb{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--b);flex-shrink:0;flex-wrap:wrap}
+.logo{width:26px;height:26px;background:var(--a);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:12px;flex-shrink:0}
+#pname{background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t);padding:5px 10px;font-family:inherit;font-size:14px;width:200px;outline:none}
+#pname:focus{border-color:var(--a)}
+.sep{width:1px;height:22px;background:var(--b);flex-shrink:0}
+.tbtn{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--t2);cursor:pointer;font-family:inherit;font-size:12px;transition:all .15s;white-space:nowrap}
+.tbtn:hover{background:var(--bg3);color:var(--t)}
+.tbtn.active{background:rgba(46,204,154,.12);border-color:rgba(46,204,154,.4);color:var(--a)}
+.tbtn.danger{border-color:rgba(224,85,85,.3);color:#e05555}
+.tbtn.danger:hover{background:rgba(224,85,85,.1)}
+.sp{flex:1}
+#save-btn{background:var(--a);color:#000;border:none;border-radius:7px;padding:7px 16px;font-weight:600;font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px}
 #save-btn:disabled{opacity:.4;cursor:not-allowed}
+#status{font-size:11px;color:var(--t3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* Main layout */
-#main{display:grid;grid-template-columns:1fr 300px;flex:1;overflow:hidden}
+/* Layout */
+#main{display:grid;grid-template-columns:1fr 280px;flex:1;overflow:hidden;min-height:0}
 
-/* Canvas area */
-#canvas-area{position:relative;overflow:hidden;background:#1a1e28}
-#trace-canvas{width:100%;height:100%;cursor:crosshair;display:block}
-#canvas-area.pan-mode #trace-canvas{cursor:grab}
-#canvas-area.pan-mode.panning #trace-canvas{cursor:grabbing}
+/* Canvas */
+#ca{position:relative;overflow:hidden;background:#1a1e28;cursor:crosshair}
+#ca.pan{cursor:grab}
+#ca.panning{cursor:grabbing}
+#tc{width:100%;height:100%;display:block}
 
-/* Floating tools */
-#float-tools{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px}
-.ft-btn{width:36px;height:36px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s}
-.ft-btn:hover{background:var(--bg3);color:var(--text)}
-.ft-btn.active{background:rgba(46,204,154,.15);border-color:rgba(46,204,154,.4);color:var(--accent)}
+/* Float tools */
+#ft{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:5px}
+.ftb{width:34px;height:34px;border-radius:7px;background:var(--bg2);border:1px solid var(--b2);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .15s}
+.ftb:hover{background:var(--bg3);color:var(--t)}
+.ftb.active{background:rgba(46,204,154,.15);border-color:rgba(46,204,154,.4);color:var(--a)}
+.ftb-sep{height:1px;background:var(--b);margin:2px 0}
 
-/* Zoom indicator */
-#zoom-indicator{position:absolute;bottom:12px;left:12px;font-size:11px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 10px}
-
-/* Instructions */
-#instructions{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--text2);background:rgba(13,15,20,.85);backdrop-filter:blur(8px);border:1px solid var(--border2);border-radius:99px;padding:6px 16px;white-space:nowrap;pointer-events:none;transition:opacity .3s}
-
-/* Auto-detect progress */
-#auto-bar{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;display:none;align-items:center;gap:10px;font-size:13px}
-.spin{width:14px;height:14px;border:2px solid rgba(46,204,154,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+#zoom-lbl{position:absolute;bottom:10px;left:10px;font-size:10px;color:var(--t3);background:var(--bg2);border:1px solid var(--b);border-radius:5px;padding:3px 8px}
+#instr{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--t2);background:rgba(13,15,20,.9);backdrop-filter:blur(6px);border:1px solid var(--b2);border-radius:99px;padding:5px 14px;white-space:nowrap;pointer-events:none;transition:opacity .3s}
+#autobar{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--b2);border-radius:9px;padding:8px 14px;display:none;align-items:center;gap:8px;font-size:12px;z-index:10}
+.spin{width:13px;height:13px;border:2px solid rgba(46,204,154,.3);border-top-color:var(--a);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Right panel */
-#panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-#preview-3d{flex:1;background:#080a10;position:relative}
-#preview-canvas{width:100%;height:100%;display:block}
-#preview-label{position:absolute;top:8px;left:10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+#panel{background:var(--bg2);border-left:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#prev3d{flex:1;background:#080a10;position:relative;min-height:0}
+#pc{width:100%;height:100%;display:block}
+#prev-lbl{position:absolute;top:7px;left:9px;font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
 
-#room-list{padding:12px;border-top:1px solid var(--border);overflow-y:auto;max-height:220px}
-.room-list-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.room-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;cursor:pointer;transition:background .15s}
-.room-item:hover{background:var(--bg3)}
-.room-item.selected{background:rgba(46,204,154,.1)}
-.room-color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.room-info{flex:1;min-width:0}
-.room-name-input{background:transparent;border:none;color:var(--text);font-family:inherit;font-size:13px;width:100%;outline:none;padding:0}
-.room-name-input:focus{color:var(--accent)}
-.room-area{font-size:11px;color:var(--text3)}
-.room-del{width:22px;height:22px;border-radius:4px;background:transparent;border:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
-.room-del:hover{background:rgba(224,85,85,.15);color:var(--danger)}
+#roomlist{padding:10px;border-top:1px solid var(--b);overflow-y:auto;max-height:200px}
+.rl-title{font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.ri{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;margin-bottom:2px;cursor:pointer}
+.ri:hover{background:var(--bg3)}
+.ri.sel{background:rgba(46,204,154,.08)}
+.rcolor{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.rinfo{flex:1;min-width:0}
+.rni{background:transparent;border:none;color:var(--t);font-family:inherit;font-size:12px;width:100%;outline:none;padding:0;cursor:pointer}
+.rni:focus{color:var(--a);cursor:text}
+.rarea{font-size:10px;color:var(--t3)}
+.rdel{width:20px;height:20px;border-radius:4px;background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.rdel:hover{background:rgba(224,85,85,.15);color:#e05555}
 
-#panel-footer{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
-.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.meta-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:6px 10px;font-family:inherit;font-size:13px;outline:none;width:100%}
-.meta-input:focus{border-color:var(--accent)}
-.meta-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+#meta{padding:10px;border-top:1px solid var(--b)}
+.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px}
+.meta-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.mi{background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t);padding:5px 9px;font-family:inherit;font-size:12px;outline:none;width:100%}
+.mi:focus{border-color:var(--a)}
 </style>
 </head>
 <body>
 
-<!-- Top bar -->
-<div id="topbar">
+<div id="tb">
   <div class="logo">A</div>
-  <input id="prop-name-input" type="text" placeholder="Názov nehnuteľnosti…">
+  <input id="pname" type="text" placeholder="Názov nehnuteľnosti…">
   <div class="sep"></div>
-
-  <button class="tool-btn active" id="tb-draw" onclick="setTool('draw')">
-    <span class="tool-icon">✏️</span> Kresliť
-  </button>
-  <button class="tool-btn" id="tb-select" onclick="setTool('select')">
-    <span class="tool-icon">↖</span> Vybrať
-  </button>
-  <button class="tool-btn" id="tb-pan" onclick="setTool('pan')">
-    <span class="tool-icon">✋</span> Posúvať
-  </button>
-
+  <button class="tbtn active" id="tb-draw" onclick="setTool('draw')">✏ Kresliť</button>
+  <button class="tbtn" id="tb-sel" onclick="setTool('select')">↖ Vybrať</button>
+  <button class="tbtn" id="tb-pan" onclick="setTool('pan')">✋ Pan</button>
   <div class="sep"></div>
-
-  <button class="tool-btn" onclick="uploadFloorPlan()" title="Nahrať pôdorys ako pozadie">
-    <span class="tool-icon">📐</span> Nahrať pôdorys
-  </button>
-  <button class="tool-btn" id="tb-auto" onclick="autoDetect()" title="Automatická detekcia miestností">
-    <span class="tool-icon">🔍</span> Auto-detekcia
-  </button>
-  <button class="tool-btn" onclick="clearAll()" title="Vymazať všetko">
-    <span class="tool-icon">🗑</span>
-  </button>
-
-  <div class="spacer"></div>
-  <button id="save-btn" onclick="saveProperty()">💾 Uložiť & QR kód</button>
+  <button class="tbtn" onclick="triggerUpload()" title="Nahrať pôdorys ako pozadie">📐 Pôdorys</button>
+  <button class="tbtn" id="tb-auto" onclick="runAutoDetect()">🔍 Auto-detekcia</button>
+  <button class="tbtn danger" onclick="clearAll()">🗑</button>
+  <div class="sp"></div>
+  <span id="status"></span>
+  <button id="save-btn" onclick="saveProperty()">💾 Uložiť & QR</button>
 </div>
 
-<!-- Main -->
 <div id="main">
-  <!-- Canvas -->
-  <div id="canvas-area">
-    <canvas id="trace-canvas"></canvas>
-
-    <div id="float-tools">
-      <div class="ft-btn" onclick="zoomIn()" title="Priblížiť">+</div>
-      <div class="ft-btn" onclick="zoomOut()" title="Oddialiť">−</div>
-      <div class="ft-btn" onclick="resetView()" title="Reset pohľadu">⊙</div>
-      <div class="sep" style="width:100%;height:1px;background:var(--border)"></div>
-      <div class="ft-btn" onclick="undoLast()" title="Späť">↩</div>
+  <div id="ca">
+    <canvas id="tc"></canvas>
+    <div id="ft">
+      <div class="ftb active" id="ft-draw" onclick="setTool('draw')" title="Kresliť (D)">✏</div>
+      <div class="ftb" id="ft-sel" onclick="setTool('select')" title="Vybrať (S)">↖</div>
+      <div class="ftb" id="ft-pan" onclick="setTool('pan')" title="Posúvať (P)">✋</div>
+      <div class="ftb-sep"></div>
+      <div class="ftb" onclick="zoomIn()" title="Priblížiť (+)">+</div>
+      <div class="ftb" onclick="zoomOut()" title="Oddialiť (-)">−</div>
+      <div class="ftb" onclick="resetView()" title="Reset (R)">⊙</div>
+      <div class="ftb-sep"></div>
+      <div class="ftb" onclick="undo()" title="Späť (Ctrl+Z)">↩</div>
+      <div class="ftb" onclick="closeRoom()" title="Uzavrieť miestnosť (Enter)" style="font-size:11px">✓</div>
     </div>
-
-    <div id="zoom-indicator">100%</div>
-
-    <div id="instructions">Kliknite pre pridanie bodu — dvojklik alebo Enter pre uzavretie miestnosti</div>
-
-    <div id="auto-bar">
-      <div class="spin"></div>
-      <span id="auto-msg">Analyzujem pôdorys…</span>
-    </div>
+    <div id="zoom-lbl">100%</div>
+    <div id="instr">Kliknite pre bod · Enter alebo ✓ pre uzavretie miestnosti</div>
+    <div id="autobar"><div class="spin"></div><span id="auto-msg">Analyzujem…</span></div>
   </div>
 
-  <!-- Right panel -->
   <div id="panel">
-    <div id="preview-3d">
-      <canvas id="preview-canvas"></canvas>
-      <div id="preview-label">Live 3D náhľad</div>
+    <div id="prev3d">
+      <canvas id="pc"></canvas>
+      <div id="prev-lbl">Live 3D náhľad</div>
     </div>
-
-    <div id="room-list">
-      <div class="room-list-title">Miestnosti</div>
-      <div id="room-items"></div>
+    <div id="roomlist">
+      <div class="rl-title">
+        <span>Miestnosti</span>
+        <span id="room-count" style="color:var(--a);font-size:10px">0</span>
+      </div>
+      <div id="ri-container"></div>
     </div>
-
-    <div id="panel-footer">
+    <div id="meta">
       <div class="meta-row">
-        <div>
-          <div class="meta-label">Rozloha (m²)</div>
-          <input class="meta-input" id="meta-area" type="number" placeholder="78">
-        </div>
-        <div>
-          <div class="meta-label">Cena (€)</div>
-          <input class="meta-input" id="meta-price" type="text" placeholder="189 000">
-        </div>
+        <div><div class="meta-lbl">Rozloha m²</div><input class="mi" id="m-area" type="number" placeholder="78"></div>
+        <div><div class="meta-lbl">Cena €</div><input class="mi" id="m-price" placeholder="189 000"></div>
       </div>
     </div>
   </div>
 </div>
 
-<input type="file" id="floor-file-input" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="onFloorFileSelected(this)">
+<input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="onFileSelected(this)">
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
-const API = () => localStorage.getItem('avra_api') || location.origin;
-// ID from pathname: /editor/:id
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = location.origin;
 function getIdFromPath(){
-  const parts=location.pathname.split('/').filter(Boolean);
-  return parts.length>=2&&parts[0]==='editor'?parts[1]:null;
+  const p=location.pathname.split('/').filter(Boolean);
+  return p.length>=2&&p[0]==='editor'?p[1]:null;
 }
-const propId = getIdFromPath();
+let propId = getIdFromPath();
 
-let tool = 'draw';
-let rooms = []; // {id, name, points:[{x,y}], closed, color}
-let currentPoints = []; // points being drawn
-let selectedRoom = null;
-let bgImage = null;
+// ── State ─────────────────────────────────────────────────────────────────────
+let tool='draw';
+let rooms=[];         // {id,name,pts:[{x,y}],closed,color}
+let curPts=[];        // points being drawn
+let selRoom=null;
+let bgImg=null;
+let roomIdx=0;
 
-// Viewport
-let viewX = 0, viewY = 0, viewScale = 1;
-let isPanning = false, panStartX = 0, panStartY = 0, panViewX = 0, panViewY = 0;
-let mouseX = 0, mouseY = 0;
+let vx=0,vy=0,vs=1;  // viewport: offset x,y + scale
+let isPan=false,panSX=0,panSY=0,panVX=0,panVY=0;
+let mx=0,my=0;        // mouse in screen coords
 
-const ROOM_NAMES = ['Obývacia izba','Kuchyňa','Spálňa','Detská izba','Kúpeľňa','Chodba','Pracovňa','Jedáleň','WC','Šatník','Terasa','Balkón'];
-const ROOM_COLORS = ['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a','#e05555','#e0a835','#9bd55b','#d55b9b','#5bd5c8'];
+const NAMES=['Obývacia izba','Kuchyňa','Spálňa','Detská izba','Kúpeľňa','Chodba','Pracovňa','Jedáleň','WC','Šatník','Terasa','Balkón'];
+const COLORS=['#5b9bd5','#4caf7d','#e0a835','#a07dd0','#2ecc9a','#e07070','#70b0e0','#9bd570','#d570b0','#70d5c8'];
 
-let roomCounter = 0;
-function newRoom(pts=[]){
-  return {
-    id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
-    name: ROOM_NAMES[roomCounter % ROOM_NAMES.length],
-    points: pts,
-    closed: pts.length >= 3,
-    color: ROOM_COLORS[roomCounter % ROOM_COLORS.length],
-  };
-}
-
-// ── Trace Canvas ──────────────────────────────────────────────────────────────
-const tc = document.getElementById('trace-canvas');
-const ctx = tc.getContext('2d');
+// ── Canvas setup ──────────────────────────────────────────────────────────────
+const tc=document.getElementById('tc');
+const ctx=tc.getContext('2d');
 
 function resizeCanvas(){
-  const area = document.getElementById('canvas-area');
-  tc.width  = area.clientWidth;
-  tc.height = area.clientHeight;
+  const a=document.getElementById('ca');
+  tc.width=a.clientWidth; tc.height=a.clientHeight;
   draw();
 }
-window.addEventListener('resize', resizeCanvas);
+new ResizeObserver(resizeCanvas).observe(document.getElementById('ca'));
 
-// World ↔ Screen transforms
-function worldToScreen(x,y){ return { x: x*viewScale+viewX, y: y*viewScale+viewY }; }
-function screenToWorld(x,y){ return { x: (x-viewX)/viewScale, y: (y-viewY)/viewScale }; }
+// ── Coordinate transforms ─────────────────────────────────────────────────────
+const w2s=(x,y)=>({x:x*vs+vx, y:y*vs+vy});
+const s2w=(x,y)=>({x:(x-vx)/vs, y:(y-vy)/vs});
 
+// ── Drawing ───────────────────────────────────────────────────────────────────
 function draw(){
   ctx.clearRect(0,0,tc.width,tc.height);
-
-  // Grid
   drawGrid();
-
-  // Background image
-  if(bgImage){
-    const sw = bgImage.width*viewScale, sh = bgImage.height*viewScale;
-    ctx.globalAlpha = 0.35;
-    ctx.drawImage(bgImage, viewX, viewY, sw, sh);
-    ctx.globalAlpha = 1;
+  if(bgImg){
+    ctx.globalAlpha=0.3;
+    ctx.drawImage(bgImg,vx,vy,bgImg.width*vs,bgImg.height*vs);
+    ctx.globalAlpha=1;
   }
-
-  // Rooms
-  rooms.forEach(room => drawRoom(room, room === selectedRoom));
-
-  // Current drawing
-  if(currentPoints.length > 0 && tool === 'draw'){
-    drawCurrentPath();
-  }
-
-  // Update zoom indicator
-  document.getElementById('zoom-indicator').textContent = Math.round(viewScale*100)+'%';
+  rooms.forEach(r=>drawRoom(r,r===selRoom));
+  if(curPts.length&&tool==='draw') drawCurrentPath();
+  document.getElementById('zoom-lbl').textContent=Math.round(vs*100)+'%';
 }
 
 function drawGrid(){
-  const gridSize = 50 * viewScale;
-  if(gridSize < 8) return;
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-  ctx.lineWidth = 0.5;
-  const startX = ((viewX % gridSize) + gridSize) % gridSize;
-  const startY = ((viewY % gridSize) + gridSize) % gridSize;
+  const gs=50*vs; if(gs<8)return;
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=.5;
   ctx.beginPath();
-  for(let x = startX; x < tc.width; x += gridSize){ ctx.moveTo(x,0); ctx.lineTo(x,tc.height); }
-  for(let y = startY; y < tc.height; y += gridSize){ ctx.moveTo(0,y); ctx.lineTo(tc.width,y); }
+  for(let x=((vx%gs)+gs)%gs;x<tc.width;x+=gs){ctx.moveTo(x,0);ctx.lineTo(x,tc.height);}
+  for(let y=((vy%gs)+gs)%gs;y<tc.height;y+=gs){ctx.moveTo(0,y);ctx.lineTo(tc.width,y);}
   ctx.stroke();
 }
 
-function drawRoom(room, selected){
-  if(room.points.length < 2) return;
-  const pts = room.points.map(p => worldToScreen(p.x, p.y));
-
-  // Fill
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
-  if(room.closed) ctx.closePath();
-
-  if(room.closed){
-    ctx.fillStyle = room.color + '33';
-    ctx.fill();
+function drawRoom(r,sel){
+  if(r.pts.length<2)return;
+  const p=r.pts.map(pt=>w2s(pt.x,pt.y));
+  ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);
+  p.slice(1).forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  if(r.closed){
+    ctx.closePath();
+    ctx.fillStyle=r.color+'33';ctx.fill();
   }
-
-  // Stroke
-  ctx.strokeStyle = selected ? room.color : room.color+'aa';
-  ctx.lineWidth = selected ? 2.5 : 1.5;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.stroke();
-
+  ctx.strokeStyle=sel?r.color:r.color+'aa';
+  ctx.lineWidth=sel?2.5:1.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
   // Points
-  pts.forEach((p,i) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, selected ? 5 : 3.5, 0, Math.PI*2);
-    ctx.fillStyle = i===0 ? '#2ecc9a' : room.color;
-    ctx.fill();
-    if(selected){
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+  p.forEach((pt,i)=>{
+    ctx.beginPath();ctx.arc(pt.x,pt.y,sel?5:3.5,0,Math.PI*2);
+    ctx.fillStyle=i===0?'#2ecc9a':r.color;ctx.fill();
+    if(sel){ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();}
   });
-
   // Label
-  if(room.closed){
-    const cx = pts.reduce((s,p)=>s+p.x,0)/pts.length;
-    const cy = pts.reduce((s,p)=>s+p.y,0)/pts.length;
-    ctx.font = `${Math.max(10, 12*viewScale)}px system-ui`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = room.color;
-    ctx.fillText(room.name, cx, cy-8*viewScale);
-    const area = calcArea(room.points);
-    if(area > 0){
-      ctx.font = `${Math.max(9,10*viewScale)}px system-ui`;
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.fillText(area.toFixed(1)+' m²', cx, cy+6*viewScale);
-    }
+  if(r.closed){
+    const cx=p.reduce((s,pt)=>s+pt.x,0)/p.length;
+    const cy=p.reduce((s,pt)=>s+pt.y,0)/p.length;
+    const fs=Math.max(10,12*vs);
+    ctx.font=`${fs}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=r.color;ctx.fillText(r.name,cx,cy-7*vs);
+    const a=roomArea(r.pts);
+    if(a>0){ctx.font=`${Math.max(9,10*vs)}px system-ui`;ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillText(a.toFixed(1)+' m²',cx,cy+6*vs);}
   }
 }
 
 function drawCurrentPath(){
-  if(currentPoints.length === 0) return;
-  const pts = currentPoints.map(p => worldToScreen(p.x, p.y));
-  ctx.strokeStyle = '#2ecc9a';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4,4]);
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
-  // Line to mouse
-  ctx.lineTo(mouseX, mouseY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  pts.forEach((p,i) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, i===0?6:4, 0, Math.PI*2);
-    ctx.fillStyle = i===0 ? '#2ecc9a' : '#2ecc9a88';
-    ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
+  if(!curPts.length)return;
+  const p=curPts.map(pt=>w2s(pt.x,pt.y));
+  ctx.strokeStyle='#2ecc9a';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);
+  p.slice(1).forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.lineTo(mx,my);ctx.stroke();ctx.setLineDash([]);
+  p.forEach((pt,i)=>{
+    ctx.beginPath();ctx.arc(pt.x,pt.y,i===0?6:4,0,Math.PI*2);
+    ctx.fillStyle=i===0?'#2ecc9a':'#2ecc9a88';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
   });
-
-  // Snap indicator to first point
-  if(currentPoints.length >= 3){
-    const first = worldToScreen(currentPoints[0].x, currentPoints[0].y);
-    const dist = Math.hypot(mouseX-first.x, mouseY-first.y);
-    if(dist < 20){
-      ctx.beginPath();
-      ctx.arc(first.x, first.y, 12, 0, Math.PI*2);
-      ctx.strokeStyle = '#2ecc9a';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([3,3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
+  // Snap ring on first point
+  if(curPts.length>=3){
+    const f=w2s(curPts[0].x,curPts[0].y);
+    if(Math.hypot(mx-f.x,my-f.y)<20){
+      ctx.beginPath();ctx.arc(f.x,f.y,14,0,Math.PI*2);
+      ctx.strokeStyle='#2ecc9a';ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
     }
   }
 }
 
-// ── Canvas Events ─────────────────────────────────────────────────────────────
-tc.addEventListener('mousemove', e => {
-  const rect = tc.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top;
-
-  if(isPanning){
-    viewX = panViewX + (e.clientX - panStartX);
-    viewY = panViewY + (e.clientY - panStartY);
-  }
+// ── Events ────────────────────────────────────────────────────────────────────
+tc.addEventListener('mousemove',e=>{
+  const r=tc.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
+  if(isPan){vx=panVX+(e.clientX-panSX);vy=panVY+(e.clientY-panSY);}
   draw();
 });
 
-tc.addEventListener('mousedown', e => {
-  if(tool === 'pan' || e.button === 1){
-    isPanning = true;
-    panStartX = e.clientX; panStartY = e.clientY;
-    panViewX = viewX; panViewY = viewY;
-    document.getElementById('canvas-area').classList.add('panning');
-    return;
+tc.addEventListener('mousedown',e=>{
+  const r=tc.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
+  if(tool==='pan'||e.button===1){
+    isPan=true;panSX=e.clientX;panSY=e.clientY;panVX=vx;panVY=vy;
+    document.getElementById('ca').classList.add('panning');return;
   }
-  if(tool === 'draw' && e.button === 0){
-    const wp = screenToWorld(mouseX, mouseY);
-
-    // Check snap to first point
-    if(currentPoints.length >= 3){
-      const first = worldToScreen(currentPoints[0].x, currentPoints[0].y);
-      if(Math.hypot(mouseX-first.x, mouseY-first.y) < 20){
-        closeCurrentRoom();
-        return;
-      }
+  if(tool==='draw'&&e.button===0){
+    const wp=s2w(mx,my);
+    if(curPts.length>=3){
+      const f=w2s(curPts[0].x,curPts[0].y);
+      if(Math.hypot(mx-f.x,my-f.y)<20){closeRoom();return;}
     }
-    currentPoints.push({x: snapToGrid(wp.x), y: snapToGrid(wp.y)});
-    draw();
+    curPts.push(snap(wp));draw();
   }
-  if(tool === 'select' && e.button === 0){
-    const wp = screenToWorld(mouseX, mouseY);
-    selectedRoom = rooms.find(r => r.closed && pointInPolygon(wp, r.points)) || null;
-    renderRoomList();
-    draw();
+  if(tool==='select'&&e.button===0){
+    const wp=s2w(mx,my);
+    selRoom=rooms.find(r=>r.closed&&ptInPoly(wp,r.pts))||null;
+    renderRoomList();draw();
   }
 });
 
-tc.addEventListener('mouseup', () => {
-  isPanning = false;
-  document.getElementById('canvas-area').classList.remove('panning');
-});
-
-tc.addEventListener('dblclick', e => {
-  if(tool === 'draw' && currentPoints.length >= 3){
-    closeCurrentRoom();
-  }
-});
-
-tc.addEventListener('wheel', e => {
+tc.addEventListener('mouseup',()=>{isPan=false;document.getElementById('ca').classList.remove('panning');});
+tc.addEventListener('dblclick',()=>{if(tool==='draw'&&curPts.length>=3)closeRoom();});
+tc.addEventListener('wheel',e=>{
   e.preventDefault();
-  const factor = e.deltaY > 0 ? 0.9 : 1.1;
-  const rect = tc.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  viewX = mx - (mx - viewX) * factor;
-  viewY = my - (my - viewY) * factor;
-  viewScale = Math.max(0.1, Math.min(10, viewScale * factor));
-  draw();
-}, {passive:false});
-
-document.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && currentPoints.length >= 3) closeCurrentRoom();
-  if(e.key === 'Escape'){ currentPoints=[]; draw(); }
-  if(e.key === 'z' && (e.ctrlKey||e.metaKey)) undoLast();
-});
-
-// Touch support for mobile
-let touchStartX=0,touchStartY=0,lastTouchDist=null,touchPanX=0,touchPanY=0;
-tc.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if(e.touches.length===1){
-    const t=e.touches[0];
-    const rect=tc.getBoundingClientRect();
-    touchStartX=t.clientX-rect.left; touchStartY=t.clientY-rect.top;
-    touchPanX=viewX; touchPanY=viewY;
-    mouseX=touchStartX; mouseY=touchStartY;
-  }
-  if(e.touches.length===2){
-    lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-  }
+  const f=e.deltaY>0?.9:1.1;
+  const r=tc.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  vx=x-(x-vx)*f;vy=y-(y-vy)*f;
+  vs=Math.max(.05,Math.min(15,vs*f));draw();
 },{passive:false});
 
-tc.addEventListener('touchmove', e => {
+// Touch
+let tStartX=0,tStartY=0,tPanX=0,tPanY=0,tDist=null;
+tc.addEventListener('touchstart',e=>{
   e.preventDefault();
   if(e.touches.length===1){
-    const t=e.touches[0];
-    const rect=tc.getBoundingClientRect();
-    mouseX=t.clientX-rect.left; mouseY=t.clientY-rect.top;
-    if(tool==='pan'){
-      viewX=touchPanX+(mouseX-touchStartX);
-      viewY=touchPanY+(mouseY-touchStartY);
-    }
+    const r=tc.getBoundingClientRect();
+    tStartX=e.touches[0].clientX-r.left;tStartY=e.touches[0].clientY-r.top;
+    tPanX=vx;tPanY=vy;mx=tStartX;my=tStartY;
+  }
+  if(e.touches.length===2) tDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+},{passive:false});
+
+tc.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    const r=tc.getBoundingClientRect();
+    mx=e.touches[0].clientX-r.left;my=e.touches[0].clientY-r.top;
+    if(tool==='pan'){vx=tPanX+(mx-tStartX);vy=tPanY+(my-tStartY);}
   }
   if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    if(lastTouchDist){
-      const f=d/lastTouchDist;
-      const mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
-      const my=(e.touches[0].clientY+e.touches[1].clientY)/2;
-      viewX=mx-(mx-viewX)*f; viewY=my-(my-viewY)*f;
-      viewScale=Math.max(0.1,Math.min(10,viewScale*f));
-    }
-    lastTouchDist=d;
+    if(tDist){const f=d/tDist;const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;const cy=(e.touches[0].clientY+e.touches[1].clientY)/2;vx=cx-(cx-vx)*f;vy=cy-(cy-vy)*f;vs=Math.max(.05,Math.min(15,vs*f));}
+    tDist=d;
   }
   draw();
 },{passive:false});
 
-tc.addEventListener('touchend', e => {
-  e.preventDefault();
-  lastTouchDist=null;
-  if(tool==='draw' && e.changedTouches.length===1){
-    const wp=screenToWorld(mouseX,mouseY);
-    if(currentPoints.length>=3){
-      const first=worldToScreen(currentPoints[0].x,currentPoints[0].y);
-      if(Math.hypot(mouseX-first.x,mouseY-first.y)<24){ closeCurrentRoom(); return; }
-    }
-    currentPoints.push({x:snapToGrid(wp.x),y:snapToGrid(wp.y)});
-    draw();
+tc.addEventListener('touchend',e=>{
+  e.preventDefault();tDist=null;
+  if(tool==='draw'&&e.changedTouches.length===1){
+    const wp=s2w(mx,my);
+    if(curPts.length>=3){const f=w2s(curPts[0].x,curPts[0].y);if(Math.hypot(mx-f.x,my-f.y)<24){closeRoom();return;}}
+    curPts.push(snap(wp));draw();
   }
 },{passive:false});
 
-// ── Helper functions ──────────────────────────────────────────────────────────
-function snapToGrid(v, gridSize=10){ return Math.round(v/gridSize)*gridSize; }
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='Enter')closeRoom();
+  if(e.key==='Escape'){curPts=[];draw();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='z')undo();
+  if(e.key==='d')setTool('draw');
+  if(e.key==='s')setTool('select');
+  if(e.key==='p')setTool('pan');
+  if(e.key==='+'||e.key==='=')zoomIn();
+  if(e.key==='-')zoomOut();
+  if(e.key==='r')resetView();
+});
 
-function closeCurrentRoom(){
-  if(currentPoints.length < 3) return;
-  const room = newRoom([...currentPoints]);
-  rooms.push(room);
-  roomCounter++;
-  currentPoints = [];
-  selectedRoom = room;
-  renderRoomList();
-  update3DPreview();
-  draw();
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function snap(p,g=10){return{x:Math.round(p.x/g)*g,y:Math.round(p.y/g)*g};}
 
-function calcArea(pts){
-  // Shoelace formula in canvas coords, convert to m² (1 unit = 10px = 0.5m)
-  let area = 0;
-  for(let i=0;i<pts.length;i++){
-    const j=(i+1)%pts.length;
-    area += pts[i].x * pts[j].y;
-    area -= pts[j].x * pts[i].y;
-  }
-  area = Math.abs(area)/2;
-  // Convert: assume 100px = 5m (1px = 0.05m), so 1px² = 0.0025m²
-  return area * 0.0025;
-}
-
-function pointInPolygon(pt, polygon){
-  let inside = false;
-  for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
-    const xi=polygon[i].x,yi=polygon[i].y,xj=polygon[j].x,yj=polygon[j].y;
-    if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
+function ptInPoly(pt,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi))inside=!inside;
   }
   return inside;
 }
 
-// ── Room list UI ──────────────────────────────────────────────────────────────
-function renderRoomList(){
-  const container = document.getElementById('room-items');
-  container.innerHTML = rooms.map((r,i) => `
-    <div class="room-item ${r===selectedRoom?'selected':''}" onclick="selectRoom(${i})">
-      <div class="room-color" style="background:${r.color}"></div>
-      <div class="room-info">
-        <input class="room-name-input" value="${r.name}" onclick="event.stopPropagation()"
-               onchange="rooms[${i}].name=this.value;draw();update3DPreview()">
-        <div class="room-area">${calcArea(r.points).toFixed(1)} m²</div>
-      </div>
-      <button class="room-del" onclick="deleteRoom(${i});event.stopPropagation()">✕</button>
-    </div>`).join('');
+function roomArea(pts){
+  // Shoelace → m² (1px = 0.05m)
+  let a=0;
+  for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}
+  return Math.abs(a)/2*0.0025;
 }
 
-function selectRoom(i){
-  selectedRoom = rooms[i];
-  renderRoomList();
-  draw();
+// ── Room operations ───────────────────────────────────────────────────────────
+function closeRoom(){
+  if(curPts.length<3){setStatus('Potrebné aspoň 3 body');return;}
+  const room={id:Date.now()+'',name:NAMES[roomIdx%NAMES.length],pts:[...curPts],closed:true,color:COLORS[roomIdx%COLORS.length]};
+  rooms.push(room);roomIdx++;
+  selRoom=room;curPts=[];
+  renderRoomList();update3D();draw();
 }
+window.closeRoom=closeRoom;
 
 function deleteRoom(i){
-  if(rooms[i]===selectedRoom) selectedRoom=null;
-  rooms.splice(i,1);
-  renderRoomList();
-  update3DPreview();
-  draw();
+  if(rooms[i]===selRoom)selRoom=null;
+  rooms.splice(i,1);renderRoomList();update3D();draw();
 }
 
 // ── Tools ─────────────────────────────────────────────────────────────────────
 function setTool(t){
-  tool = t;
-  currentPoints = [];
-  document.querySelectorAll('[id^="tb-"]').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tb-'+t)?.classList.add('active');
-  document.getElementById('canvas-area').classList.toggle('pan-mode', t==='pan');
-  const hints = {draw:'Kliknite pre bod — Enter/dvojklik pre uzavretie', select:'Kliknite na miestnosť pre výber', pan:'Ťahajte pre posúvanie — scroll pre zoom'};
-  document.getElementById('instructions').textContent = hints[t]||'';
+  tool=t;curPts=[];
+  ['draw','sel','pan'].forEach(x=>{
+    document.getElementById('tb-'+x)?.classList.toggle('active',x===t);
+    document.getElementById('ft-'+x)?.classList.toggle('active',x===t);
+  });
+  document.getElementById('ca').className=t==='pan'?'pan':'';
+  const hints={draw:'Kliknite pre bod · Enter alebo ✓ pre uzavretie · Escape pre zrušenie',select:'Kliknite na miestnosť',pan:'Ťahajte · Scroll pre zoom'};
+  document.getElementById('instr').textContent=hints[t]||'';
   draw();
 }
 window.setTool=setTool;
 
-function zoomIn(){ viewScale=Math.min(10,viewScale*1.2); draw(); }
-function zoomOut(){ viewScale=Math.max(0.1,viewScale/1.2); draw(); }
-function resetView(){ viewX=tc.width/2; viewY=tc.height/2; viewScale=1; draw(); }
-function undoLast(){
-  if(currentPoints.length>0){ currentPoints.pop(); draw(); }
-  else if(rooms.length>0){ rooms.pop(); renderRoomList(); update3DPreview(); draw(); }
+function zoomIn(){vs=Math.min(15,vs*1.2);draw();}
+function zoomOut(){vs=Math.max(.05,vs/1.2);draw();}
+function resetView(){vx=tc.width/2;vy=tc.height/2;vs=1;draw();}
+function undo(){
+  if(curPts.length>0){curPts.pop();draw();}
+  else if(rooms.length>0){rooms.pop();roomIdx--;renderRoomList();update3D();draw();}
 }
-window.zoomIn=zoomIn; window.zoomOut=zoomOut; window.resetView=resetView; window.undoLast=undoLast;
-window.clearAll=()=>{ if(!confirm('Vymazať všetky miestnosti?'))return; rooms=[]; roomCounter=0; currentPoints=[]; selectedRoom=null; renderRoomList(); update3DPreview(); draw(); };
+function clearAll(){
+  if(!confirm('Vymazať všetky miestnosti?'))return;
+  rooms=[];roomIdx=0;curPts=[];selRoom=null;renderRoomList();update3D();draw();
+}
+window.zoomIn=zoomIn;window.zoomOut=zoomOut;window.resetView=resetView;window.undo=undo;window.clearAll=clearAll;
 
-// ── Floor plan background ─────────────────────────────────────────────────────
-function uploadFloorPlan(){ document.getElementById('floor-file-input').click(); }
-window.uploadFloorPlan=uploadFloorPlan;
+// ── Floor plan upload ─────────────────────────────────────────────────────────
+function triggerUpload(){document.getElementById('file-input').click();}
+window.triggerUpload=triggerUpload;
 
-function onFloorFileSelected(input){
-  const file = input.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      bgImage = img;
-      // Fit image to canvas
-      const scaleX = tc.width * 0.8 / img.width;
-      const scaleY = tc.height * 0.8 / img.height;
-      viewScale = Math.min(scaleX, scaleY);
-      viewX = (tc.width - img.width*viewScale)/2;
-      viewY = (tc.height - img.height*viewScale)/2;
+function onFileSelected(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      bgImg=img;
+      const sx=tc.width*.85/img.width,sy=tc.height*.85/img.height;
+      vs=Math.min(sx,sy);vx=(tc.width-img.width*vs)/2;vy=(tc.height-img.height*vs)/2;
       draw();
-
       // Auto-detect after upload
-      autoDetectFromFile(file);
+      runAutoDetectWithFile(file);
     };
-    img.src = e.target.result;
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
+  input.value='';
 }
-window.onFloorFileSelected=onFloorFileSelected;
+window.onFileSelected=onFileSelected;
 
 // ── Auto-detection ────────────────────────────────────────────────────────────
-async function autoDetect(){
-  if(!bgImage){ alert('Najprv nahrajte pôdorys pomocou tlačidla "Nahrať pôdorys"'); return; }
+async function runAutoDetect(){
+  if(!bgImg){setStatus('Najprv nahrajte pôdorys (tlačidlo Pôdorys)');return;}
+  // Convert canvas background to blob
+  const c2=document.createElement('canvas');
+  c2.width=bgImg.width;c2.height=bgImg.height;
+  c2.getContext('2d').drawImage(bgImg,0,0);
+  c2.toBlob(blob=>runAutoDetectWithFile(new File([blob],'fp.png',{type:'image/png'})),'image/png');
+}
+window.runAutoDetect=runAutoDetect;
+
+async function runAutoDetectWithFile(file){
   showAutoBar('Analyzujem pôdorys…');
-
-  // Send image to server for OpenCV analysis
   try{
-    const canvas2 = document.createElement('canvas');
-    canvas2.width = bgImage.width; canvas2.height = bgImage.height;
-    canvas2.getContext('2d').drawImage(bgImage, 0, 0);
-    const blob = await new Promise(r => canvas2.toBlob(r, 'image/png'));
-    const fd = new FormData();
-    fd.append('image', blob, 'floorplan.png');
-
-    const res = await fetch(API()+'/api/parse-floorplan', {method:'POST', body:fd});
-    if(!res.ok) throw new Error('Server error');
-    const data = await res.json();
-
+    const fd=new FormData();fd.append('image',file,file.name);
+    const res=await fetch(API+'/api/parse-floorplan',{method:'POST',body:fd});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
     hideAutoBar();
-    if(data.rooms && data.rooms.length > 0){
-      applyAutoRooms(data.rooms);
-    } else {
-      alert('Automatická detekcia nenašla miestnosti. Skúste nakresliť manuálne.');
+    if(data.rooms&&data.rooms.length>=1){
+      applyDetectedRooms(data.rooms);
+      setStatus(`✓ Detekovaných ${data.rooms.length} miestností — skontrolujte a dolaďte`);
+    }else{
+      setStatus(data.message||'Auto-detekcia nenašla miestnosti — nakreslite manuálne');
     }
-  }catch(e){
-    hideAutoBar();
-    console.error('Auto-detect error:', e);
-    alert('Auto-detekcia zlyhala: '+e.message+'\nSkúste nakresliť miestnosti manuálne.');
-  }
-}
-window.autoDetect=autoDetect;
-
-async function autoDetectFromFile(file){
-  showAutoBar('Automaticky deteکtujem miestnosti…');
-  try{
-    const fd = new FormData();
-    fd.append('image', file, file.name);
-    const res = await fetch(API()+'/api/parse-floorplan', {method:'POST', body:fd});
-    if(!res.ok) throw new Error();
-    const data = await res.json();
-    hideAutoBar();
-    if(data.rooms && data.rooms.length >= 2){
-      applyAutoRooms(data.rooms);
-      showMsg(`✓ Detekovaných ${data.rooms.length} miestností — skontrolujte a dolaďte`, 4000);
-    }
-  }catch(e){ hideAutoBar(); }
+  }catch(e){hideAutoBar();setStatus('Chyba auto-detekcie: '+e.message);}
 }
 
-function applyAutoRooms(serverRooms){
-  // Convert server AR coords back to canvas coords
-  // Server: x,z in AR meters (scale 0.035), 20m real world
-  // Canvas: center is at viewX,viewY, 1px = 0.05m at scale 1
-  const SCALE = 20.0, AR = 0.035;
-  const canvasScale = 100 / AR / SCALE; // AR units to canvas units
+function applyDetectedRooms(serverRooms){
+  // Server rooms are in AR scale (0.035 * 20m)
+  // Convert back to canvas coords: AR_units / (0.035/20) = canvas px
+  const AR_TO_PX = 20 / 0.035; // ~571 px per real meter at scale 1
 
-  rooms = serverRooms.map((r,i) => {
-    const cw = r.w * canvasScale;
-    const cd = r.d * canvasScale;
-    const cx = r.x * canvasScale;
-    const cz = r.z * canvasScale;
+  rooms = serverRooms.map((r,i)=>{
+    const cpx = r.x * AR_TO_PX;
+    const cpz = r.z * AR_TO_PX;
+    const cw  = r.w * AR_TO_PX;
+    const cd  = r.d * AR_TO_PX;
     return {
-      ...newRoom([
-        {x:cx-cw/2, y:cz-cd/2},
-        {x:cx+cw/2, y:cz-cd/2},
-        {x:cx+cw/2, y:cz+cd/2},
-        {x:cx-cw/2, y:cz+cd/2},
-      ]),
-      name: r.name,
+      id: Date.now()+'_'+i,
+      name: r.name||NAMES[i%NAMES.length],
+      pts: [
+        {x:cpx-cw/2,y:cpz-cd/2},{x:cpx+cw/2,y:cpz-cd/2},
+        {x:cpx+cw/2,y:cpz+cd/2},{x:cpx-cw/2,y:cpz+cd/2}
+      ],
       closed: true,
+      color: COLORS[i%COLORS.length]
     };
   });
-  roomCounter = rooms.length;
-  renderRoomList();
-  update3DPreview();
-  draw();
-}
+  roomIdx=rooms.length;
 
-function showAutoBar(msg){
-  document.getElementById('auto-msg').textContent = msg;
-  document.getElementById('auto-bar').style.display = 'flex';
-}
-function hideAutoBar(){ document.getElementById('auto-bar').style.display = 'none'; }
-function showMsg(msg, ms=3000){
-  const el=document.getElementById('instructions');
-  el.textContent=msg; el.style.opacity='1';
-  setTimeout(()=>el.style.opacity='0.6',ms);
-}
-
-// ── 3D Preview ────────────────────────────────────────────────────────────────
-const pcanvas = document.getElementById('preview-canvas');
-const prev = { renderer:null, scene:null, camera:null, group:null };
-
-function init3DPreview(){
-  const renderer = new THREE.WebGLRenderer({canvas:pcanvas, antialias:true, alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.setClearColor(0x080a10);
-  renderer.shadowMap.enabled = true;
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x080a10);
-  scene.add(new THREE.AmbientLight(0xffffff,0.8));
-  const sun = new THREE.DirectionalLight(0xfff8ee,1);
-  sun.position.set(3,6,4); sun.castShadow=true; scene.add(sun);
-
-  const aspect = pcanvas.clientWidth/Math.max(1,pcanvas.clientHeight);
-  const camera = new THREE.PerspectiveCamera(55, aspect, 0.001, 100);
-  camera.position.set(1.5,1.2,1.5);
-  camera.lookAt(0,0,0);
-
-  const group = new THREE.Group();
-  scene.add(group);
-
-  prev.renderer=renderer; prev.scene=scene; prev.camera=camera; prev.group=group;
-
-  // Auto-rotate
-  let theta=Math.PI/4;
-  function animate(){
-    requestAnimationFrame(animate);
-    theta += 0.005;
-    const r=1.6;
-    camera.position.set(Math.sin(theta)*r, 1.1, Math.cos(theta)*r);
-    camera.lookAt(0,0.04,0);
-    const w=pcanvas.clientWidth, h=pcanvas.clientHeight;
-    if(pcanvas.width!==w||pcanvas.height!==h){
-      renderer.setSize(w,h,false);
-      camera.aspect=w/Math.max(1,h);
-      camera.updateProjectionMatrix();
-    }
-    renderer.render(scene,camera);
+  // Center view on rooms
+  if(rooms.length>0){
+    const allX=rooms.flatMap(r=>r.pts.map(p=>p.x));
+    const allY=rooms.flatMap(r=>r.pts.map(p=>p.y));
+    const cx=(Math.min(...allX)+Math.max(...allX))/2;
+    const cy=(Math.min(...allY)+Math.max(...allY))/2;
+    vx=tc.width/2-cx*vs;vy=tc.height/2-cy*vs;
   }
-  animate();
+
+  renderRoomList();update3D();draw();
 }
 
-const FLOORS_3D=[0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
-const WALLS_3D=[0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+function showAutoBar(msg){document.getElementById('auto-msg').textContent=msg;document.getElementById('autobar').style.display='flex';}
+function hideAutoBar(){document.getElementById('autobar').style.display='none';}
+function setStatus(msg){document.getElementById('status').textContent=msg;document.getElementById('status').title=msg;}
 
-function update3DPreview(){
-  if(!prev.group) return;
-  while(prev.group.children.length) prev.group.remove(prev.group.children[0]);
-
-  const CANVAS_TO_AR = 0.035/(20); // 1 canvas unit → AR units
-  const WH=0.09, WT=0.006, FT=0.004;
-
-  rooms.forEach((room,i)=>{
-    if(!room.closed||room.points.length<3) return;
-    const ci=i%5;
-
-    // Bounding box of room points → floor & walls
-    const xs=room.points.map(p=>p.x), ys=room.points.map(p=>p.y);
-    const minX=Math.min(...xs),maxX=Math.max(...xs);
-    const minY=Math.min(...ys),maxY=Math.max(...ys);
-    const cx=(minX+maxX)/2*CANVAS_TO_AR, cz=(minY+maxY)/2*CANVAS_TO_AR;
-    const rw=(maxX-minX)*CANVAS_TO_AR, rd=(maxY-minY)*CANVAS_TO_AR;
-
-    const fm=new THREE.MeshLambertMaterial({color:FLOORS_3D[ci]});
-    const wm=new THREE.MeshLambertMaterial({color:WALLS_3D[ci]});
-
-    const floor=new THREE.Mesh(new THREE.BoxGeometry(rw,FT,rd),fm);
-    floor.position.set(cx,0,cz); prev.group.add(floor);
-
-    [[rw,WH,WT,cx,WH/2,cz-rd/2],[rw,WH,WT,cx,WH/2,cz+rd/2],
-     [WT,WH,rd,cx-rw/2,WH/2,cz],[WT,WH,rd,cx+rw/2,WH/2,cz]
-    ].forEach(([w,h,d,x,y,z])=>{
-      const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wm);
-      wall.position.set(x,y,z); wall.castShadow=true; prev.group.add(wall);
-    });
-  });
+// ── Room list ─────────────────────────────────────────────────────────────────
+function renderRoomList(){
+  document.getElementById('room-count').textContent=rooms.length;
+  document.getElementById('ri-container').innerHTML=rooms.map((r,i)=>`
+    <div class="ri ${r===selRoom?'sel':''}" onclick="selectRoom(${i})">
+      <div class="rcolor" style="background:${r.color}"></div>
+      <div class="rinfo">
+        <input class="rni" value="${r.name}" onclick="event.stopPropagation()" 
+               onchange="rooms[${i}].name=this.value;draw();update3D()">
+        <div class="rarea">${roomArea(r.pts).toFixed(1)} m²${r.closed?'':' (otvorená)'}</div>
+      </div>
+      <button class="rdel" onclick="deleteRoom(${i});event.stopPropagation()">✕</button>
+    </div>`).join('');
 }
 
-// ── Convert rooms to AR format for saving ─────────────────────────────────────
+function selectRoom(i){selRoom=rooms[i];renderRoomList();draw();}
+
+// ── Convert to AR format for saving ──────────────────────────────────────────
 function roomsToAR(){
-  const CANVAS_TO_M = 0.05; // 1px = 0.05m
-  const AR = 0.035/1; // AR scale factor
-  return rooms.filter(r=>r.closed&&r.points.length>=3).map(r=>{
-    const xs=r.points.map(p=>p.x), ys=r.points.map(p=>p.y);
+  // 1px = 0.05m (at scale 1), AR scale = 0.035
+  const CANVAS_TO_AR = 0.05 * 0.035;
+  return rooms.filter(r=>r.closed&&r.pts.length>=3).map(r=>{
+    const xs=r.pts.map(p=>p.x),ys=r.pts.map(p=>p.y);
     const minX=Math.min(...xs),maxX=Math.max(...xs);
     const minY=Math.min(...ys),maxY=Math.max(...ys);
-    const w=(maxX-minX)*CANVAS_TO_M*AR;
-    const d=(maxY-minY)*CANVAS_TO_M*AR;
-    const cx=(minX+maxX)/2*CANVAS_TO_M*AR;
-    const cz=(minY+maxY)/2*CANVAS_TO_M*AR;
-    return {
-      name:r.name, label:r.name.slice(0,2),
-      x:+cx.toFixed(4), z:+cz.toFixed(4),
-      w:+w.toFixed(4),  d:+d.toFixed(4),
-      area:+calcArea(r.points).toFixed(1)
-    };
+    const cx=(minX+maxX)/2*CANVAS_TO_AR - (tc.width/2)*CANVAS_TO_AR;
+    const cz=(minY+maxY)/2*CANVAS_TO_AR - (tc.height/2)*CANVAS_TO_AR;
+    const w=Math.max(0.01,(maxX-minX)*CANVAS_TO_AR);
+    const d=Math.max(0.01,(maxY-minY)*CANVAS_TO_AR);
+    return{name:r.name,label:'R'+(rooms.indexOf(r)+1),
+      x:+cx.toFixed(4),z:+cz.toFixed(4),
+      w:+w.toFixed(4),d:+d.toFixed(4),
+      area:+roomArea(r.pts).toFixed(1)};
   });
 }
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 async function saveProperty(){
-  const name = document.getElementById('prop-name-input').value.trim();
-  if(!name){ alert('Zadajte názov nehnuteľnosti'); return; }
-
-  const arRooms = roomsToAR();
-  if(arRooms.length===0){ alert('Nakreslite aspoň jednu miestnosť'); return; }
+  const name=document.getElementById('pname').value.trim();
+  if(!name){alert('Zadajte názov nehnuteľnosti');return;}
+  const arRooms=roomsToAR();
+  if(!arRooms.length){alert('Nakreslite aspoň jednu uzavretú miestnosť (Enter alebo ✓ po nakreslení)');return;}
 
   const btn=document.getElementById('save-btn');
-  btn.disabled=true; btn.textContent='Ukladám…';
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> Ukladám…';
 
   try{
-    const payload={
+    const body={
       name,
-      area: document.getElementById('meta-area').value || '',
-      price: document.getElementById('meta-price').value || '',
-      rooms: JSON.stringify(arRooms),
-      source: 'trace',
+      area:document.getElementById('m-area').value||'',
+      price:document.getElementById('m-price').value||'',
+      rooms:arRooms,
+      source:'trace'
     };
 
-    let savedId = propId;
-    let data;
-
+    let res,data;
     if(propId){
-      // Update existing — PUT with JSON
-      const res = await fetch(API()+'/api/properties/'+propId, {
-        method: 'PUT',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          name, source:'trace',
-          area: payload.area,
-          price: payload.price,
-          rooms: arRooms,
-        })
+      // Update existing
+      res=await fetch(`${API}/api/properties/${propId}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
       });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      data = await res.json();
-      data.id = propId;
-    } else {
-      // Create new — POST as FormData so multer can handle it
-      const fd = new FormData();
-      fd.append('name', name);
-      fd.append('area', payload.area);
-      fd.append('price', payload.price);
-      fd.append('rooms', payload.rooms);
-      fd.append('source', 'trace');
-      const res = await fetch(API()+'/api/properties', {
-        method: 'POST',
-        body: fd
+    }else{
+      // Create new
+      res=await fetch(`${API}/api/properties`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
       });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      data = await res.json();
-      savedId = data.id;
-      // Update URL so next save is a PUT
-      if(savedId){ history.replaceState(null,'','/editor/'+savedId); }
     }
 
-    console.log('Saved:', data);
-    btn.textContent='✓ Uložené!';
-    setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Uložiť & QR kód';},2500);
-
-    if(data.qrCode){
-      showQRModal(data.qrCode, data.viewerUrl||('/view/'+(savedId||'')), savedId||'');
+    if(!res.ok){
+      const err=await res.json().catch(()=>({error:'HTTP '+res.status}));
+      throw new Error(err.error||'HTTP '+res.status);
     }
+    data=await res.json();
+
+    if(!propId&&data.id){
+      propId=data.id;
+      history.replaceState(null,'','/editor/'+propId);
+    }
+
+    btn.disabled=false;btn.innerHTML='✓ Uložené!';
+    setTimeout(()=>{btn.innerHTML='💾 Uložiť & QR';},2500);
+    setStatus(`Uložené · ${arRooms.length} miestností`);
+
+    if(data.qrCode) showQRModal(data.qrCode,data.viewer_url||data.viewerUrl,data.id||propId);
+
   }catch(e){
     console.error('Save error:',e);
+    setStatus('Chyba: '+e.message);
+    btn.disabled=false;btn.innerHTML='💾 Uložiť & QR';
     alert('Chyba pri ukladaní: '+e.message);
-    btn.disabled=false; btn.textContent='💾 Uložiť & QR kód';
   }
 }
 window.saveProperty=saveProperty;
 
-function showQRModal(qrCode, url, id){
-  const div=document.createElement('div');
-  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
-  div.innerHTML=`
-    <div style="background:#13161e;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center">
-      <div style="font-size:18px;font-weight:500;margin-bottom:8px;color:#e8eaf0">QR kód pripravený!</div>
-      <div style="font-size:12px;color:#8b90a0;margin-bottom:16px">${url}</div>
-      <div style="background:#fff;padding:12px;border-radius:10px;display:inline-block;margin-bottom:16px">
-        <img src="${qrCode}" style="width:200px;height:200px;display:block">
-      </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:14px">
-        <a href="${qrCode}" download="qr-${id}.png" style="background:#2ecc9a;color:#000;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;text-decoration:none">⬇ Stiahnuť PNG</a>
-        <a href="/view/${id}" target="_blank" style="background:transparent;color:#2ecc9a;border:1px solid rgba(46,204,154,.4);border-radius:8px;padding:9px 18px;font-size:13px;text-decoration:none">↗ Otvoriť AR</a>
-      </div>
-      <button onclick="this.closest('[style]').remove()" style="background:transparent;border:1px solid rgba(255,255,255,.14);color:#8b90a0;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;font-family:inherit">Zavrieť</button>
-    </div>`;
-  document.body.appendChild(div);
+function showQRModal(qrCode,url,id){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  d.innerHTML=`<div style="background:#13161e;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center">
+    <div style="font-size:18px;font-weight:500;margin-bottom:6px;color:#e8eaf0">Model uložený ✓</div>
+    <div style="font-size:11px;color:#555a6a;margin-bottom:14px;font-family:monospace;word-break:break-all">${url}</div>
+    <div style="background:#fff;padding:12px;border-radius:10px;display:inline-block;margin-bottom:14px"><img src="${qrCode}" style="width:180px;height:180px;display:block"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">
+      <a href="${qrCode}" download="qr-avra-${id}.png" style="background:#2ecc9a;color:#000;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;text-decoration:none">⬇ QR PNG</a>
+      <a href="${url}" target="_blank" style="background:transparent;color:#2ecc9a;border:1px solid rgba(46,204,154,.4);border-radius:7px;padding:8px 16px;font-size:13px;text-decoration:none">↗ AR viewer</a>
+    </div>
+    <button onclick="this.closest('div[style]').remove()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:#8b90a0;border-radius:7px;padding:7px 18px;font-size:12px;cursor:pointer;font-family:inherit">Zavrieť</button>
+  </div>`;
+  document.body.appendChild(d);
+}
+
+// ── 3D Preview ────────────────────────────────────────────────────────────────
+const pc=document.getElementById('pc');
+const prev={renderer:null,scene:null,camera:null,group:null,theta:Math.PI/4};
+
+function init3D(){
+  const r=new THREE.WebGLRenderer({canvas:pc,antialias:true,alpha:true});
+  r.setPixelRatio(Math.min(devicePixelRatio,2));
+  r.setClearColor(0x080a10);
+  r.shadowMap.enabled=true;
+  const s=new THREE.Scene();
+  s.background=new THREE.Color(0x080a10);
+  s.add(new THREE.AmbientLight(0xffffff,.85));
+  const sun=new THREE.DirectionalLight(0xfff8ee,1);
+  sun.position.set(3,6,4);sun.castShadow=true;s.add(sun);
+  const c=new THREE.PerspectiveCamera(55,1,0.001,100);
+  const g=new THREE.Group();s.add(g);
+  prev.renderer=r;prev.scene=s;prev.camera=c;prev.group=g;
+  (function animate(){
+    requestAnimationFrame(animate);
+    prev.theta+=.004;
+    const radius=1.5;
+    c.position.set(Math.sin(prev.theta)*radius,1.0,Math.cos(prev.theta)*radius);
+    c.lookAt(0,.04,0);
+    const w=pc.clientWidth,h=pc.clientHeight;
+    if(pc.width!==w||pc.height!==h){r.setSize(w,h,false);c.aspect=w/Math.max(1,h);c.updateProjectionMatrix();}
+    r.render(s,c);
+  })();
+}
+
+const FL3=[0xb8cce0,0xb0d4bc,0xddc89a,0xc8b8d8,0xc0d8e0];
+const WL3=[0x2a3a5c,0x2a4a38,0x4a3a1a,0x3a2a4a,0x1a3040];
+
+function update3D(){
+  if(!prev.group)return;
+  while(prev.group.children.length)prev.group.remove(prev.group.children[0]);
+  const AR=0.05*0.035,WH=0.09,WT=0.006,FT=0.004;
+  rooms.forEach((room,i)=>{
+    if(!room.closed||room.pts.length<3)return;
+    const ci=i%5;
+    const xs=room.pts.map(p=>p.x),ys=room.pts.map(p=>p.y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs);
+    const minY=Math.min(...ys),maxY=Math.max(...ys);
+    const cx=(minX+maxX)/2*AR-(tc.width/2)*AR;
+    const cz=(minY+maxY)/2*AR-(tc.height/2)*AR;
+    const rw=Math.max(0.01,(maxX-minX)*AR);
+    const rd=Math.max(0.01,(maxY-minY)*AR);
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(rw,FT,rd),new THREE.MeshLambertMaterial({color:FL3[ci]}));
+    fl.position.set(cx,0,cz);fl.receiveShadow=true;prev.group.add(fl);
+    [[rw,WH,WT,cx,WH/2,cz-rd/2],[rw,WH,WT,cx,WH/2,cz+rd/2],[WT,WH,rd,cx-rw/2,WH/2,cz],[WT,WH,rd,cx+rw/2,WH/2,cz]].forEach(([w,h,d,x,y,z])=>{
+      const wm=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:WL3[ci]}));
+      wm.position.set(x,y,z);wm.castShadow=true;prev.group.add(wm);
+    });
+  });
 }
 
 // ── Load existing property ─────────────────────────────────────────────────────
 async function loadProperty(){
-  if(!propId) return;
+  if(!propId)return;
   try{
-    const res=await fetch(API()+'/api/properties/'+propId);
-    if(!res.ok) return;
+    const res=await fetch(`${API}/api/properties/${propId}`);
+    if(!res.ok)return;
     const p=await res.json();
-    document.getElementById('prop-name-input').value=p.name||'';
-    document.getElementById('meta-area').value=p.area||'';
-    document.getElementById('meta-price').value=p.price||'';
-  }catch(e){}
+    document.getElementById('pname').value=p.name||'';
+    document.getElementById('m-area').value=p.area||'';
+    document.getElementById('m-price').value=p.price||'';
+    setStatus(`Načítaná: ${p.name} · ${p.rooms?.length||0} miestností`);
+  }catch(e){console.warn('Load error:',e.message);}
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────────
 resizeCanvas();
-init3DPreview();
 resetView();
-loadProperty();
+init3D();
 setTool('draw');
+loadProperty();
 </script>
 </body>
 </html>
