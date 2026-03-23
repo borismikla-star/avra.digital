@@ -3,6 +3,7 @@ const {v4:uuidv4}=require('uuid'),QRCode=require('qrcode'),cors=require('cors');
 const low=require('lowdb'),FileSync=require('lowdb/adapters/FileSync');
 const {execFile,execSync}=require('child_process');
 const {generateGLB}=require('./glb');
+const {parseFloorPlan}=require('./parser');
 
 const app=express();
 const PORT=process.env.PORT||3000;
@@ -31,12 +32,12 @@ const upload=multer({
   limits:{fileSize:50*1024*1024}
 });
 
-// ── Detect Python once at startup ─────────────────────────────────────────────
+// ── Detect Python (optional — JS parser is primary) ──────────────────────────
 let PYTHON=null;
-for(const py of ['python3.11','python3','python','/usr/bin/python3.11','/usr/bin/python3','/usr/local/bin/python3','/nix/var/nix/profiles/default/bin/python3']){
+for(const py of ['python3.11','python3','python','/usr/bin/python3.11','/usr/bin/python3']){
   try{execSync(`${py} -c "import sys;print(sys.version)"`,{stdio:'pipe'});PYTHON=py;break;}catch{}
 }
-console.log('Python:',PYTHON||'NOT FOUND — parser disabled');
+console.log('Python:',PYTHON||'not found (using JS parser)');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function defaultRooms(){return[
@@ -57,20 +58,14 @@ function validateRooms(r){
   return v.length?v:null;
 }
 
-function runParser(imgPath){
-  return new Promise(resolve=>{
-    if(!PYTHON){resolve(null);return;}
-    const script=path.join(__dirname,'../parser/parse.py');
-    execFile(PYTHON,[script,imgPath],{timeout:30000},(err,stdout,stderr)=>{
-      if(err){console.error('Parser error:',err.message);resolve(null);return;}
-      try{
-        const r=JSON.parse(stdout.trim());
-        if(r.error||!r.rooms?.length){resolve(null);return;}
-        console.log(`Parser: ${r.rooms.length} rooms via ${r.source}`);
-        resolve(r);
-      }catch(e){console.error('Parser JSON error:',stdout.slice(0,200));resolve(null);}
-    });
-  });
+async function runParser(imgPath){
+  try{
+    const result = await parseFloorPlan(imgPath, PYTHON);
+    return result;
+  }catch(e){
+    console.error('runParser error:',e.message);
+    return null;
+  }
 }
 
 async function buildAndSaveGLB(id,rooms){
@@ -203,7 +198,7 @@ app.get('/view/:id',(req,res)=>res.sendFile(path.join(PUBLIC,'viewer/index.html'
 app.get('/editor',(req,res)=>res.sendFile(path.join(PUBLIC,'editor/index.html')));
 app.get('/editor/:id',(req,res)=>res.sendFile(path.join(PUBLIC,'editor/index.html')));
 app.get('/admin',(req,res)=>res.sendFile(path.join(PUBLIC,'admin/index.html')));
-app.get('/health',(req,res)=>res.json({status:'ok',version:'3.2.0',
-  python:PYTHON||null,properties:db.get('properties').size().value()}));
+app.get('/health',(req,res)=>res.json({status:'ok',version:'3.3.0',
+  python:PYTHON||null,parser:'js+python',properties:db.get('properties').size().value()}));
 
 app.listen(PORT,()=>console.log(`\nAVRA v3.2 — port ${PORT}\nPython: ${PYTHON||'not found'}\n${BASE_URL}/admin\n`));

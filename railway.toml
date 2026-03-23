@@ -2,12 +2,12 @@
 builder = "nixpacks"
 
 [build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pillow", "python311Packages.numpy"]
 
 [build.nixpacksPlan.phases.install]
 cmds = [
   "npm install",
-  "python3.11 -m pip install opencv-python-headless Pillow numpy --break-system-packages || python3.11 -m pip install Pillow numpy --break-system-packages"
+  "python3.11 -c 'import PIL, numpy; print(\"Python deps OK\")' || echo 'Python deps missing but continuing'"
 ]
 
 [deploy]
